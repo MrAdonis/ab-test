@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Code FAQ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .accordion-content.open {
+      max-height: 600px;
+    }
+    .accordion-icon {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .accordion-icon.rotated {
+      transform: rotate(45deg);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4 sm:p-8">
+  <div class="w-full max-w-2xl">
+    <div class="mb-10 text-center">
+      <span class="inline-block px-3 py-1 text-xs font-semibold tracking-widest text-indigo-600 bg-indigo-50 rounded-full uppercase mb-4">FAQ</span>
+      <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 tracking-tight">Claude Code 使用指南</h1>
+      <p class="mt-3 text-slate-500 text-base">常见问题解答</p>
+    </div>
+
+    <div class="space-y-3" id="accordion">
+
+      <div class="accordion-item bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <button
+          class="accordion-trigger w-full flex items-center justify-between px-6 py-5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 rounded-2xl"
+          aria-expanded="false"
+        >
+          <span class="flex items-center gap-4">
+            <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm group-hover:bg-indigo-100 transition-colors">1</span>
+            <span class="text-slate-800 font-semibold text-base sm:text-lg leading-snug group-hover:text-indigo-600 transition-colors">Claude Code 和 ChatGPT 有什么区别？</span>
+          </span>
+          <svg class="accordion-icon flex-shrink-0 ml-4 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+        <div class="accordion-content">
+          <div class="px-6 pb-6 pt-1">
+            <div class="pl-12">
+              <p class="text-slate-600 leading-relaxed text-sm sm:text-base">
+                Claude Code 是专为开发者设计的 CLI 工具，直接运行在终端和代码库中，能够读写文件、执行命令、操作 Git。ChatGPT 是通用对话 AI，主要在浏览器界面中使用。
+              </p>
+              <ul class="mt-4 space-y-2 text-sm sm:text-base text-slate-600">
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>Claude Code 可以直接访问你的文件系统和终端，ChatGPT 不行</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>Claude Code 支持 MCP（Model Context Protocol）扩展工具链</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>Claude Code 天然适合多文件重构、代码库导航、自动化任务</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <button
+          class="accordion-trigger w-full flex items-center justify-between px-6 py-5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 rounded-2xl"
+          aria-expanded="false"
+        >
+          <span class="flex items-center gap-4">
+            <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm group-hover:bg-indigo-100 transition-colors">2</span>
+            <span class="text-slate-800 font-semibold text-base sm:text-lg leading-snug group-hover:text-indigo-600 transition-colors">如何在 Claude Code 中使用子代理？</span>
+          </span>
+          <svg class="accordion-icon flex-shrink-0 ml-4 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+        <div class="accordion-content">
+          <div class="px-6 pb-6 pt-1">
+            <div class="pl-12">
+              <p class="text-slate-600 leading-relaxed text-sm sm:text-base">
+                子代理（Subagent）允许主代理将子任务委托给独立的 agent 并行执行，提升复杂任务的处理效率。
+              </p>
+              <ul class="mt-4 space-y-2 text-sm sm:text-base text-slate-600">
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>使用 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700 text-xs font-mono">Task</code> 工具派发子任务，子代理在独立 context 中运行</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>省略 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700 text-xs font-mono">subagent_type</code> 默认为 fork，继承父进程缓存，成本最低</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>子代理只负责执行和返回结构化摘要，决策权保留在主代理</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span>委托深度上限为 depth-1，子代理不再派生子代理</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <button
+          class="accordion-trigger w-full flex items-center justify-between px-6 py-5 text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 rounded-2xl"
+          aria-expanded="false"
+        >
+          <span class="flex items-center gap-4">
+            <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm group-hover:bg-indigo-100 transition-colors">3</span>
+            <span class="text-slate-800 font-semibold text-base sm:text-lg leading-snug group-hover:text-indigo-600 transition-colors">Claude Code 支持哪些 MCP 工具？</span>
+          </span>
+          <svg class="accordion-icon flex-shrink-0 ml-4 w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+        <div class="accordion-content">
+          <div class="px-6 pb-6 pt-1">
+            <div class="pl-12">
+              <p class="text-slate-600 leading-relaxed text-sm sm:text-base">
+                MCP（Model Context Protocol）是 Anthropic 推出的开放标准，允许将外部工具和数据源接入 Claude Code。常见支持的工具类型包括：
+              </p>
+              <ul class="mt-4 space-y-2 text-sm sm:text-base text-slate-600">
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span><strong class="text-slate-700">浏览器自动化</strong>：Chrome DevTools、Playwright 等，支持截图、点击、表单填写</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span><strong class="text-slate-700">云平台</strong>：Cloudflare（Pages、Workers、R2、D1）、GitHub 等</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span><strong class="text-slate-700">知识库</strong>：Context7 文档查询、ChromaFS 向量文件系统</span></li>
+                <li class="flex items-start gap-2"><span class="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span><span><strong class="text-slate-700">搜索与抓取</strong>：Tavily 搜索、网页内容提取等</span></li>
+              </ul>
+              <p class="mt-4 text-slate-500 text-xs sm:text-sm">通过 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700 font-mono">/mcp</code> 命令管理已连接的 MCP server，也可在 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700 font-mono">settings.json</code> 中配置。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const items = document.querySelectorAll('.accordion-item');
+
+    items.forEach(item => {
+      const trigger = item.querySelector('.accordion-trigger');
+      const content = item.querySelector('.accordion-content');
+      const icon = item.querySelector('.accordion-icon');
+
+      trigger.addEventListener('click', () => {
+        const isOpen = content.classList.contains('open');
+
+        // Close all
+        items.forEach(other => {
+          other.querySelector('.accordion-content').classList.remove('open');
+          other.querySelector('.accordion-icon').classList.remove('rotated');
+          other.querySelector('.accordion-trigger').setAttribute('aria-expanded', 'false');
+          other.classList.remove('ring-2', 'ring-indigo-200');
+        });
+
+        // Open clicked if it was closed
+        if (!isOpen) {
+          content.classList.add('open');
+          icon.classList.add('rotated');
+          trigger.setAttribute('aria-expanded', 'true');
+          item.classList.add('ring-2', 'ring-indigo-200');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
