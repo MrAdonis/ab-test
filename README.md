@@ -13,6 +13,7 @@
 | [t1](./t1-model-routing/) | Opus 4.7 / Sonnet 4.6 / Codex GPT-5.5 模型分流 | 4 任务 × 3 模型，找各模型最优场景 | Codex 中文 5/10 禁推文；GPT-5.5 前端已和 Opus 持平 |
 | [t2](./t2-feedback-grading/) | Code Review 反馈 4 档分级（Must/Optional/Nit/FYI） | 同 Sonnet 加/不加规则对比，3 场景盲测 | Treatment 9.0 / baseline 7.2，入 `~/.claude/rules/coding.md` |
 | [t3](./t3-yfinance-skill-cli/) | yfinance skill：每次现写 Python vs 固化成 CLI | 5 场景跑两 arm，对照 ground truth 评分 | 固化 CLI 47.5 / 内联代码 37；优势全在高频 top-op，长尾平手 |
+| [t4](./t4-cli-agent-dod/) | Agent-native 工具接口 DoD 扩充（借自 Cursor `cli-for-agent`） | 3 档复杂度 × A(4契约)/B(7契约) 盲测 | 无条件加 3 条没赢(A102/B101)；砍成 1 无条件+2 条件触发门后 dominant，入 `coding-dod.md` |
 
 每个文件夹自带 `README.md` + `REPORT.md` + 测试用例（`prompts/` 或 `scenarios.md`） + `outputs/`。
 
