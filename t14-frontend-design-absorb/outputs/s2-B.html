@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mara Lindqvist — Urban Architecture Photography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ──────────────────────────────────────────────
+     TOKENS
+  ────────────────────────────────────────────── */
+  :root {
+    --ink:    #0e0e0e;
+    --paper:  #f2ede6;
+    --mid:    #7a7168;
+    --accent: #c8401a;   /* single accent — terracotta, warm tension */
+    --rule:   1px solid #0e0e0e;
+
+    --f-display: 'Playfair Display', Georgia, serif;
+    --f-mono:    'DM Mono', 'Courier New', monospace;
+
+    --space-xs:  8px;
+    --space-s:  16px;
+    --space-m:  32px;
+    --space-l:  64px;
+    --space-xl: 128px;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ──────────────────────────────────────────────
+     RESET
+  ────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ──────────────────────────────────────────────
+     NOISE OVERLAY (fixed, pointer-events-none)
+  ────────────────────────────────────────────── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: .45;
+    mix-blend-mode: multiply;
+  }
+
+  /* ──────────────────────────────────────────────
+     NAV
+  ────────────────────────────────────────────── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px var(--space-l);
+    mix-blend-mode: multiply;
+  }
+
+  .nav-name {
+    font-family: var(--f-display);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: var(--space-m);
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    transition: color 150ms;
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: width 250ms var(--ease-out);
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* ──────────────────────────────────────────────
+     HERO  (VARIANCE 9 — asymmetric, brutalist)
+  ────────────────────────────────────────────── */
+  .hero {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    border-bottom: var(--rule);
+    overflow: hidden;
+  }
+
+  .hero-meta {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    padding: 120px var(--space-l) var(--space-m);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+  }
+
+  .hero-discipline {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--mid);
+    padding-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .hero-location {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mid);
+  }
+
+  .hero-title-col {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    padding: 0 var(--space-l) var(--space-l);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .hero-name {
+    font-family: var(--f-display);
+    font-size: clamp(64px, 9vw, 128px);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+
+  .hero-name em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-tagline {
+    margin-top: var(--space-m);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--mid);
+    max-width: 340px;
+  }
+
+  .hero-cta {
+    margin-top: var(--space-l);
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink);
+    border: var(--rule);
+    padding: 14px 28px;
+    transition: background 200ms, color 200ms;
+  }
+
+  .hero-cta:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .hero-cta:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .hero-cta svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 200ms var(--ease-out);
+  }
+
+  .hero-cta:hover svg { transform: translateX(4px); }
+
+  .hero-image-col {
+    grid-column: 2 / 3;
+    grid-row: 1 / 4;
+    position: relative;
+    overflow: hidden;
+    border-left: var(--rule);
+  }
+
+  .hero-image-col img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.04);
+    transition: transform 8s ease;
+  }
+
+  .hero-image-col:hover img { transform: scale(1.0); }
+
+  .hero-index {
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+    padding: var(--space-s) var(--space-l);
+    border-top: var(--rule);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mid);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ──────────────────────────────────────────────
+     SECTION SHARED
+  ────────────────────────────────────────────── */
+  section {
+    border-bottom: var(--rule);
+  }
+
+  .section-header {
+    padding: var(--space-m) var(--space-l);
+    border-bottom: var(--rule);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-family: var(--f-display);
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .section-count {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mid);
+  }
+
+  /* ──────────────────────────────────────────────
+     WORK — asymmetric mosaic (VARIANCE 9)
+  ────────────────────────────────────────────── */
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .work-item {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background: #1a1a1a;
+  }
+
+  /* Asymmetric placement — each item a different column span */
+  .work-item:nth-child(1) {
+    grid-column: 1 / 8;
+    aspect-ratio: 16/10;
+    border-right: var(--rule);
+    border-bottom: var(--rule);
+  }
+
+  .work-item:nth-child(2) {
+    grid-column: 8 / 13;
+    aspect-ratio: 5/6;
+    border-bottom: var(--rule);
+  }
+
+  .work-item:nth-child(3) {
+    grid-column: 1 / 5;
+    aspect-ratio: 4/5;
+    border-right: var(--rule);
+    border-bottom: var(--rule);
+  }
+
+  .work-item:nth-child(4) {
+    grid-column: 5 / 9;
+    aspect-ratio: 4/5;
+    border-right: var(--rule);
+    border-bottom: var(--rule);
+  }
+
+  .work-item:nth-child(5) {
+    grid-column: 9 / 13;
+    aspect-ratio: 4/5;
+    border-bottom: var(--rule);
+  }
+
+  .work-item:nth-child(6) {
+    grid-column: 1 / 13;
+    aspect-ratio: 21/8;
+  }
+
+  .work-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(20%);
+    transition: transform 700ms var(--ease-out), filter 500ms;
+  }
+
+  .work-item:hover img {
+    transform: scale(1.05);
+    filter: grayscale(0%);
+  }
+
+  .work-item-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(14,14,14,0.72) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 350ms;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: var(--space-m);
+  }
+
+  .work-item:hover .work-item-overlay { opacity: 1; }
+
+  .work-item-title {
+    font-family: var(--f-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--paper);
+    line-height: 1.1;
+    transform: translateY(8px);
+    transition: transform 400ms var(--ease-out);
+  }
+
+  .work-item:hover .work-item-title { transform: translateY(0); }
+
+  .work-item-loc {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(242,237,230,0.65);
+    margin-top: 4px;
+    transform: translateY(8px);
+    transition: transform 400ms var(--ease-out) 40ms;
+  }
+
+  .work-item:hover .work-item-loc { transform: translateY(0); }
+
+  /* ──────────────────────────────────────────────
+     ABOUT — full-width split, no card
+  ────────────────────────────────────────────── */
+  .about {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 70dvh;
+  }
+
+  .about-left {
+    padding: var(--space-xl) var(--space-l);
+    border-right: var(--rule);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .about-big {
+    font-family: var(--f-display);
+    font-size: clamp(40px, 5.5vw, 80px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+
+  .about-big .accent-word {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .about-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-m);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-m);
+    border-top: var(--rule);
+  }
+
+  .stat-num {
+    font-family: var(--f-display);
+    font-size: 40px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mid);
+    margin-top: 4px;
+  }
+
+  .about-right {
+    padding: var(--space-xl) var(--space-l);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-m);
+  }
+
+  .about-body {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--ink);
+    max-width: 480px;
+  }
+
+  .about-body + .about-body {
+    color: var(--mid);
+  }
+
+  .about-selected {
+    margin-top: var(--space-m);
+    padding-top: var(--space-m);
+    border-top: var(--rule);
+  }
+
+  .about-selected-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mid);
+    margin-bottom: var(--space-s);
+  }
+
+  .about-selected-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .about-selected-list li {
+    font-size: 13px;
+    color: var(--ink);
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .about-selected-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  /* ──────────────────────────────────────────────
+     CONTACT — horizontal strip (different layout family)
+  ────────────────────────────────────────────── */
+  .contact {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    min-height: 50dvh;
+  }
+
+  .contact-main {
+    padding: var(--space-xl) var(--space-l);
+    border-right: var(--rule);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .contact-headline {
+    font-family: var(--f-display);
+    font-size: clamp(36px, 5vw, 72px);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+  }
+
+  .contact-headline em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .contact-email-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding-top: var(--space-l);
+    border-top: var(--rule);
+  }
+
+  .contact-email {
+    font-family: var(--f-mono);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    border-bottom: 1px solid transparent;
+    transition: border-color 200ms, color 200ms;
+  }
+
+  .contact-email:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .contact-email:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .contact-info-col {
+    padding: var(--space-xl) var(--space-m);
+    border-right: var(--rule);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .contact-info-col-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+  }
+
+  .contact-info-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mid);
+    margin-bottom: 6px;
+  }
+
+  .contact-info-value {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .contact-social-col {
+    padding: var(--space-xl) var(--space-m);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .social-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+  }
+
+  .social-links a {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 150ms;
+  }
+
+  .social-links a:hover { color: var(--accent); }
+  .social-links a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .social-arrow {
+    font-size: 10px;
+    color: var(--mid);
+    transition: transform 200ms var(--ease-out), color 150ms;
+  }
+
+  .social-links a:hover .social-arrow {
+    transform: translate(2px, -2px);
+    color: var(--accent);
+  }
+
+  /* ──────────────────────────────────────────────
+     FOOTER
+  ────────────────────────────────────────────── */
+  footer {
+    padding: var(--space-m) var(--space-l);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: var(--rule);
+  }
+
+  .footer-copy {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mid);
+  }
+
+  .footer-mark {
+    font-family: var(--f-display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  /* ──────────────────────────────────────────────
+     ENTRANCE ANIMATIONS (MOTION 8)
+  ────────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(32px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes slideRight {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes revealLine {
+    from { scaleX: 0; }
+    to   { scaleX: 1; }
+  }
+
+  .hero-discipline,
+  .hero-location {
+    animation: fadeIn 800ms var(--ease-out) both;
+    animation-delay: 200ms;
+  }
+
+  .hero-name {
+    animation: fadeUp 900ms var(--ease-out) both;
+    animation-delay: 350ms;
+  }
+
+  .hero-tagline {
+    animation: fadeUp 800ms var(--ease-out) both;
+    animation-delay: 500ms;
+  }
+
+  .hero-cta {
+    animation: fadeUp 700ms var(--ease-out) both;
+    animation-delay: 650ms;
+  }
+
+  .hero-image-col {
+    animation: fadeIn 1200ms ease both;
+    animation-delay: 100ms;
+  }
+
+  /* Scroll-reveal (JS progressive enhancement) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+  }
+
+  .reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0ms; }
+  .reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 80ms; }
+  .reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 160ms; }
+  .reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 240ms; }
+  .reveal-stagger.visible > *:nth-child(5) { opacity: 1; transform: translateY(0); transition-delay: 320ms; }
+  .reveal-stagger.visible > *:nth-child(6) { opacity: 1; transform: translateY(0); transition-delay: 400ms; }
+
+  /* ──────────────────────────────────────────────
+     REDUCED MOTION
+  ────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .reveal, .reveal-stagger > * {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  /* ──────────────────────────────────────────────
+     RESPONSIVE — 768px breakpoint
+  ────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+
+    .hero {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .hero-meta {
+      grid-column: 1;
+      padding: 80px 24px 16px;
+      gap: var(--space-m);
+    }
+
+    .hero-title-col {
+      grid-column: 1;
+      padding: 0 24px 24px;
+    }
+
+    .hero-image-col {
+      grid-column: 1;
+      grid-row: 1 / 2;
+      height: 55dvh;
+      border-left: none;
+      border-bottom: var(--rule);
+    }
+
+    .hero-meta { grid-row: 2; }
+    .hero-title-col { grid-row: 3; }
+    .hero-index { grid-column: 1; grid-row: 4; }
+
+    .section-header { padding: var(--space-m) 24px; }
+
+    .work-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .work-item:nth-child(1) { grid-column: 1 / 3; aspect-ratio: 4/3; }
+    .work-item:nth-child(2) { grid-column: 1 / 2; aspect-ratio: 1; }
+    .work-item:nth-child(3) { grid-column: 2 / 3; aspect-ratio: 1; }
+    .work-item:nth-child(4) { grid-column: 1 / 2; aspect-ratio: 1; }
+    .work-item:nth-child(5) { grid-column: 2 / 3; aspect-ratio: 1; }
+    .work-item:nth-child(6) { grid-column: 1 / 3; aspect-ratio: 16/9; }
+
+    .work-item:nth-child(n) { border-right: none; }
+    .work-item:nth-child(2), .work-item:nth-child(3) { border-right: none; }
+    .work-item:nth-child(2) { border-right: var(--rule); }
+    .work-item:nth-child(4) { border-right: var(--rule); }
+
+    .about {
+      grid-template-columns: 1fr;
+    }
+
+    .about-left {
+      border-right: none;
+      border-bottom: var(--rule);
+      padding: var(--space-l) 24px;
+    }
+
+    .about-right {
+      padding: var(--space-l) 24px;
+    }
+
+    .contact {
+      grid-template-columns: 1fr;
+    }
+
+    .contact-main {
+      border-right: none;
+      border-bottom: var(--rule);
+      padding: var(--space-l) 24px;
+    }
+
+    .contact-info-col {
+      border-right: none;
+      border-bottom: var(--rule);
+      padding: var(--space-m) 24px;
+    }
+
+    .contact-social-col {
+      padding: var(--space-m) 24px;
+    }
+
+    footer {
+      padding: var(--space-m) 24px;
+      flex-direction: column;
+      gap: var(--space-s);
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .nav-links { display: none; }
+
+    .hero-name { font-size: 52px; }
+    .about-big { font-size: 36px; }
+    .contact-headline { font-size: 32px; }
+
+    .about-stats {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-s);
+    }
+
+    .stat-num { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     NAV
+════════════════════════════════════════════ -->
+<nav>
+  <span class="nav-name">M.L.</span>
+  <ul class="nav-links">
+    <li><a href="#work">Work</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- ════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-meta">
+    <span class="hero-discipline">Urban Architecture</span>
+    <span class="hero-location">Stockholm — Berlin — Tokyo</span>
+  </div>
+
+  <div class="hero-title-col">
+    <h1 class="hero-name">
+      Mara<br>Lind<em>qvist</em>
+    </h1>
+    <p class="hero-tagline">
+      Cities are built twice — once in concrete,<br>
+      once in light. I photograph the second construction.
+    </p>
+    <a href="#work" class="hero-cta">
+      View Selected Work
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="hero-image-col">
+    <img
+      src="https://picsum.photos/seed/mara-hero/900/1200"
+      alt="Concrete facade study, brutalist tower, Stockholm 2024"
+      width="900"
+      height="1200"
+    >
+  </div>
+
+  <div class="hero-index">
+    <span>Portfolio 2019–2024</span>
+    <span>47 Series · 3 Collections</span>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════
+     SELECTED WORK
+════════════════════════════════════════════ -->
+<section id="work">
+  <div class="section-header reveal">
+    <h2 class="section-title">Selected Work</h2>
+    <span class="section-count">6 of 47 series</span>
+  </div>
+
+  <div class="work-grid reveal-stagger">
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-01/1400/880"
+        alt="Cascading stairwells, Neue Nationalgalerie, Berlin"
+        width="1400"
+        height="880"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Neue Nationalgalerie</div>
+        <div class="work-item-loc">Berlin · 2023</div>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-02/700/840"
+        alt="Vertical rhythm, glass tower at dusk, Tokyo"
+        width="700"
+        height="840"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Glass Verticals</div>
+        <div class="work-item-loc">Tokyo · 2022</div>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-03/600/750"
+        alt="Shadow geometry, Stockholmshusen housing estate"
+        width="600"
+        height="750"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Stockholmshusen</div>
+        <div class="work-item-loc">Stockholm · 2021</div>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-04/600/750"
+        alt="Exposed concrete passageways, Barbican Estate"
+        width="600"
+        height="750"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Barbican Estate</div>
+        <div class="work-item-loc">London · 2022</div>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-05/600/750"
+        alt="Light grid, Centre Georges Pompidou, Paris"
+        width="600"
+        height="750"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Pompidou Grid</div>
+        <div class="work-item-loc">Paris · 2023</div>
+      </div>
+    </div>
+
+    <div class="work-item">
+      <img
+        src="https://picsum.photos/seed/mara-06/2400/914"
+        alt="Panoramic skyline sequence, urban horizon, Berlin"
+        width="2400"
+        height="914"
+        loading="lazy"
+      >
+      <div class="work-item-overlay">
+        <div class="work-item-title">Horizon Sequence</div>
+        <div class="work-item-loc">Berlin · 2024</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     ABOUT  (different layout family: split no-card)
+════════════════════════════════════════════ -->
+<section id="about" class="about">
+  <div class="about-left reveal">
+    <div>
+      <h2 class="about-big">
+        Cities<br>don't<br><span class="accent-word">pose.</span>
+      </h2>
+    </div>
+
+    <div class="about-stats reveal-stagger">
+      <div>
+        <div class="stat-num">14</div>
+        <div class="stat-label">Cities</div>
+      </div>
+      <div>
+        <div class="stat-num">47</div>
+        <div class="stat-label">Series</div>
+      </div>
+      <div>
+        <div class="stat-num">9</div>
+        <div class="stat-label">Years</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="about-right reveal">
+    <p class="about-body">
+      Mara Lindqvist is a Swedish architectural and urban photographer based between Stockholm and Berlin. Her work investigates the tension between a building's structural intention and the accidental poetry of its everyday use — shadow falling wrong, a stairwell that smells like rain, the geometry a cleaning crew leaves behind.
+    </p>
+    <p class="about-body">
+      Working exclusively with medium-format film and large-format digital, Lindqvist builds long-term series around single structures, returning over months or years to track how light, season, and human occupation rewrite the same facade.
+    </p>
+
+    <div class="about-selected">
+      <div class="about-selected-label">Selected Exhibitions & Publications</div>
+      <ul class="about-selected-list">
+        <li>Moderna Museet, Stockholm — group show, 2024</li>
+        <li>Aperture Magazine — feature essay, Spring 2023</li>
+        <li>Galerie Eigen + Art, Berlin — solo, 2022</li>
+        <li>Architectural Digest — commissioned series, 2021</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     CONTACT  (different layout: 3-column horizontal strip)
+════════════════════════════════════════════ -->
+<section id="contact" class="contact">
+  <div class="contact-main reveal">
+    <h2 class="contact-headline">
+      Let's build<br>something<br><em>permanent.</em>
+    </h2>
+
+    <div class="contact-email-row">
+      <a href="mailto:mara@maralindqvist.com" class="contact-email">
+        mara@maralindqvist.com
+      </a>
+    </div>
+  </div>
+
+  <div class="contact-info-col reveal">
+    <div class="contact-info-col-inner">
+      <div>
+        <div class="contact-info-label">Representation</div>
+        <div class="contact-info-value">
+          Galerie Eigen + Art<br>
+          Berlin & Leipzig
+        </div>
+      </div>
+      <div>
+        <div class="contact-info-label">For editorial & commissions</div>
+        <div class="contact-info-value">
+          +46 (8) 312 847<br>
+          Mon–Fri, 09:00–17:00 CET
+        </div>
+      </div>
+      <div>
+        <div class="contact-info-label">Based in</div>
+        <div class="contact-info-value">
+          Stockholm & Berlin<br>
+          Available to travel
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)">
+      Response within 48h
+    </div>
+  </div>
+
+  <div class="contact-social-col reveal">
+    <div>
+      <div class="contact-info-label">Follow</div>
+      <ul class="social-links">
+        <li>
+          <a href="#" aria-label="Instagram profile">
+            Instagram
+            <span class="social-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" aria-label="Behance profile">
+            Behance
+            <span class="social-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" aria-label="Vsco profile">
+            VSCO
+            <span class="social-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" aria-label="LinkedIn profile">
+            LinkedIn
+            <span class="social-arrow" aria-hidden="true">↗</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)">
+      © 2024 Mara Lindqvist
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════ -->
+<footer>
+  <span class="footer-copy">All images © Mara Lindqvist. All rights reserved.</span>
+  <span class="footer-mark">Mara Lindqvist</span>
+</footer>
+
+<!-- ════════════════════════════════════════════
+     SCROLL REVEAL (vanilla JS)
+════════════════════════════════════════════ -->
+<script>
+  (function () {
+    const targets = document.querySelectorAll('.reveal, .reveal-stagger');
+    if (!targets.length) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    targets.forEach((el) => io.observe(el));
+  })();
+</script>
+</body>
+</html>

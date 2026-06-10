@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SysOps Monitor — Cluster Alpha</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d0f11;
+    --surface:   #141618;
+    --surface-2: #1c1f22;
+    --border:    #2a2d31;
+    --border-2:  #363b40;
+    --text:      #d4d8dc;
+    --text-2:    #7a8088;
+    --text-3:    #4d5258;
+    --mono:      'JetBrains Mono', 'Courier New', monospace;
+    --sans:      'IBM Plex Sans', system-ui, sans-serif;
+    --green:     #22c55e;
+    --yellow:    #eab308;
+    --red:       #ef4444;
+    --blue:      #3b82f6;
+    --orange:    #f97316;
+    --accent:    #3b82f6;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+  .logo span { color: var(--accent); }
+  .cluster-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+    margin-right: 4px;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .refresh-info { color: var(--text-3); }
+
+  /* ── Layout ── */
+  .main {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 0;
+    height: calc(100vh - 40px);
+    overflow: hidden;
+  }
+
+  /* ── Section headers ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .section-action {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 100ms;
+  }
+  .section-action:hover { opacity: 1; }
+
+  /* ── Metric Cards ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .metric-card {
+    padding: 12px 16px 14px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card:last-child { border-right: none; }
+  .metric-card:hover { background: rgba(255,255,255,0.015); }
+
+  .metric-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .metric-name {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .metric-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.ok   { background: var(--green); }
+  .status-dot.warn { background: var(--yellow); }
+  .status-dot.crit { background: var(--red); }
+  .status-dot.info { background: var(--blue); }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    tabular-nums: numeric;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .metric-value.ok   { color: #e8ecf0; }
+  .metric-value.warn { color: var(--yellow); }
+  .metric-value.crit { color: var(--red); }
+
+  .metric-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .metric-delta {
+    font-variant-numeric: tabular-nums;
+  }
+  .metric-delta.up   { color: var(--red); }
+  .metric-delta.down { color: var(--green); }
+  .metric-delta.flat { color: var(--text-3); }
+
+  /* sparkline bar */
+  .sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 24px;
+    margin-top: 10px;
+  }
+  .spark-bar {
+    flex: 1;
+    border-radius: 1px;
+    min-height: 2px;
+    opacity: 0.6;
+    transition: opacity 100ms;
+  }
+  .spark-bar:hover { opacity: 1; }
+  .metric-card.ok-card   .spark-bar { background: var(--blue); }
+  .metric-card.warn-card .spark-bar { background: var(--yellow); }
+  .metric-card.crit-card .spark-bar { background: var(--red); }
+  .metric-card.ok2-card  .spark-bar { background: var(--green); }
+
+  /* ── Chart Area ── */
+  .charts-area {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    min-height: 0;
+  }
+  .chart-main {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .chart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chart-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .chart-controls {
+    display: flex;
+    gap: 1px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .chart-ctrl-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+    padding: 3px 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .chart-ctrl-btn:hover { background: var(--border); color: var(--text); }
+  .chart-ctrl-btn.active { background: var(--border-2); color: var(--text); }
+
+  .chart-body {
+    flex: 1;
+    padding: 12px 16px;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* SVG time series placeholder */
+  .chart-svg-wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  .chart-svg-wrap svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Y-axis labels */
+  .chart-y-labels {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: calc(100% - 20px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    pointer-events: none;
+  }
+  .chart-x-labels {
+    position: absolute;
+    bottom: 0;
+    left: 32px;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+  }
+
+  /* Legend */
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    padding: 6px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+  }
+  .legend-dot {
+    width: 8px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  /* Side panel */
+  .chart-side {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .side-section {
+    flex: 1;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .side-section:last-child { border-bottom: none; }
+  .side-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  /* Node list */
+  .node-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-top: 1px solid var(--border);
+  }
+  .node-row:first-of-type { border-top: none; }
+  .node-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .node-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-2);
+    text-align: right;
+  }
+  .node-bar-wrap {
+    width: 48px;
+    height: 3px;
+    background: var(--surface-2);
+    border-radius: 1.5px;
+    overflow: hidden;
+  }
+  .node-bar-fill {
+    height: 100%;
+    border-radius: 1.5px;
+  }
+
+  /* ── Alert List ── */
+  .alerts-panel {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .alerts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .alerts-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .alert-count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .alert-tab-strip {
+    display: flex;
+    gap: 0;
+  }
+  .alert-tab {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-right: none;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .alert-tab:first-child { border-radius: 3px 0 0 3px; }
+  .alert-tab:last-child  { border-right: 1px solid var(--border); border-radius: 0 3px 3px 0; }
+  .alert-tab.active { background: var(--surface-2); color: var(--text); }
+  .alert-tab:hover:not(.active) { background: var(--surface-2); }
+
+  /* Alert states container */
+  .alerts-body {
+    overflow-y: auto;
+    max-height: 220px;
+  }
+
+  /* State: normal rows */
+  .alert-table {
+    width: 100%;
+    border-collapse: collapse;
+    display: none;
+  }
+  .alert-table.active { display: table; }
+
+  .alert-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 5px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+  }
+  .alert-table td {
+    padding: 5px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .alert-table tr:last-child td { border-bottom: none; }
+  .alert-table tr:hover td { background: rgba(255,255,255,0.012); }
+
+  .sev-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+  }
+  .sev-crit  { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .sev-warn  { background: rgba(234,179,8,.12); color: var(--yellow); border: 1px solid rgba(234,179,8,.25); }
+  .sev-info  { background: rgba(59,130,246,.12); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+  .sev-ok    { background: rgba(34,197,94,.12); color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+
+  .alert-msg  { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .alert-host { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .alert-ts   { font-family: var(--mono); font-size: 10px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .alert-ack  {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .alert-ack:hover { border-color: var(--border-2); color: var(--text-2); }
+  .alert-ack:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* State: Loading */
+  .state-loading {
+    display: none;
+    padding: 16px;
+  }
+  .state-loading.active { display: block; }
+  .skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .skeleton-row:last-child { border-bottom: none; }
+  .skel {
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 2px;
+    height: 10px;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* State: Empty */
+  .state-empty {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    gap: 8px;
+  }
+  .state-empty.active { display: flex; }
+  .empty-icon {
+    width: 32px;
+    height: 32px;
+    opacity: 0.2;
+    margin-bottom: 4px;
+  }
+  .empty-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .empty-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    text-align: center;
+  }
+  .empty-action {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .empty-action:hover { border-color: var(--accent); }
+  .empty-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* State: Error */
+  .state-error {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(239,68,68,0.06);
+    border-top: 1px solid rgba(239,68,68,0.2);
+  }
+  .state-error.active { display: flex; }
+  .error-icon {
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--red);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .error-body { flex: 1; min-width: 0; }
+  .error-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    margin-bottom: 2px;
+  }
+  .error-detail {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-2);
+  }
+  .error-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .btn-retry {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .btn-retry:hover { border-color: var(--text-3); }
+  .btn-retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-dismiss {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .btn-dismiss:hover { color: var(--text-2); }
+
+  /* Status footer */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .status-items {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+  }
+  .status-item { display: flex; align-items: center; gap: 4px; }
+  .status-val { color: var(--text-2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .skel { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Top Bar ── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo">SYS<span>OPS</span></div>
+    <div class="cluster-badge">cluster: alpha-prod-1</div>
+    <div class="cluster-badge">region: ap-east-1</div>
+  </div>
+  <div class="topbar-right">
+    <span><span class="live-dot"></span>LIVE</span>
+    <span class="refresh-info">refresh: 15s · last: 14:32:07</span>
+    <span>nodes: <span style="color:var(--text)">12/12</span></span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── Metric Cards ── -->
+  <div class="metrics-row">
+
+    <!-- CPU -->
+    <div class="metric-card warn-card">
+      <div class="metric-header">
+        <span class="metric-name">CPU Utilization</span>
+        <span class="metric-status">
+          <span class="status-dot warn"></span>
+          <span style="color:var(--yellow);font-family:var(--mono);font-size:10px;">WARN</span>
+        </span>
+      </div>
+      <div class="metric-value warn">78.4<span style="font-size:14px;color:var(--text-2);font-weight:400;">%</span></div>
+      <div class="metric-sub">
+        <span>avg 12-node</span>
+        <span class="metric-delta up">▲ +12.3%</span>
+        <span style="color:var(--text-3)">vs 15m</span>
+      </div>
+      <div class="sparkline" id="spark-cpu"></div>
+    </div>
+
+    <!-- Memory -->
+    <div class="metric-card ok-card">
+      <div class="metric-header">
+        <span class="metric-name">Memory Usage</span>
+        <span class="metric-status">
+          <span class="status-dot ok"></span>
+          <span style="color:var(--green);font-family:var(--mono);font-size:10px;">OK</span>
+        </span>
+      </div>
+      <div class="metric-value ok">61.7<span style="font-size:14px;color:var(--text-2);font-weight:400;">%</span></div>
+      <div class="metric-sub">
+        <span>49.3 / 79.9 GiB</span>
+        <span class="metric-delta flat">→ −0.4%</span>
+      </div>
+      <div class="sparkline" id="spark-mem"></div>
+    </div>
+
+    <!-- Request Rate -->
+    <div class="metric-card ok2-card">
+      <div class="metric-header">
+        <span class="metric-name">Request Rate</span>
+        <span class="metric-status">
+          <span class="status-dot info"></span>
+          <span style="color:var(--blue);font-family:var(--mono);font-size:10px;">NORMAL</span>
+        </span>
+      </div>
+      <div class="metric-value ok">14.2<span style="font-size:14px;color:var(--text-2);font-weight:400;">k/s</span></div>
+      <div class="metric-sub">
+        <span>p99: 182ms</span>
+        <span class="metric-delta down">▼ −3.1%</span>
+      </div>
+      <div class="sparkline" id="spark-req"></div>
+    </div>
+
+    <!-- Error Rate -->
+    <div class="metric-card crit-card">
+      <div class="metric-header">
+        <span class="metric-name">Error Rate</span>
+        <span class="metric-status">
+          <span class="status-dot crit"></span>
+          <span style="color:var(--red);font-family:var(--mono);font-size:10px;">CRIT</span>
+        </span>
+      </div>
+      <div class="metric-value crit">3.81<span style="font-size:14px;color:var(--red);font-weight:400;">%</span></div>
+      <div class="metric-sub">
+        <span>5xx: 541/s</span>
+        <span class="metric-delta up">▲ +2.4%</span>
+      </div>
+      <div class="sparkline" id="spark-err"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Chart Area ── -->
+  <div class="charts-area">
+
+    <!-- Main Chart -->
+    <div class="chart-main">
+      <div class="chart-toolbar">
+        <span class="chart-title">Time Series — CPU · Memory · Error Rate</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="chart-controls">
+            <button class="chart-ctrl-btn">5m</button>
+            <button class="chart-ctrl-btn active">15m</button>
+            <button class="chart-ctrl-btn">1h</button>
+            <button class="chart-ctrl-btn">6h</button>
+            <button class="chart-ctrl-btn">24h</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-body">
+        <!-- Inline SVG placeholder with realistic grid + lines -->
+        <div class="chart-y-labels">
+          <span>100%</span>
+          <span>75%</span>
+          <span>50%</span>
+          <span>25%</span>
+          <span>0%</span>
+        </div>
+        <div style="margin-left:32px;height:calc(100% - 20px);position:relative;">
+          <svg viewBox="0 0 800 200" preserveAspectRatio="none" style="width:100%;height:100%;display:block;">
+            <!-- Grid lines -->
+            <g stroke="#2a2d31" stroke-width="0.5">
+              <line x1="0" y1="0"   x2="800" y2="0"/>
+              <line x1="0" y1="50"  x2="800" y2="50"/>
+              <line x1="0" y1="100" x2="800" y2="100"/>
+              <line x1="0" y1="150" x2="800" y2="150"/>
+              <line x1="0" y1="200" x2="800" y2="200"/>
+              <!-- Vertical guides -->
+              <line x1="160" y1="0" x2="160" y2="200" stroke-dasharray="3,4"/>
+              <line x1="320" y1="0" x2="320" y2="200" stroke-dasharray="3,4"/>
+              <line x1="480" y1="0" x2="480" y2="200" stroke-dasharray="3,4"/>
+              <line x1="640" y1="0" x2="640" y2="200" stroke-dasharray="3,4"/>
+            </g>
+            <!-- CPU line (yellow-ish, spiky) -->
+            <polyline
+              fill="none"
+              stroke="#eab308"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              points="
+                0,110 40,100 80,88 120,92 160,85 200,78 240,82 280,70 320,66 360,72 400,68 440,58 480,62 520,55 560,44 600,42 640,38 680,40 720,44 760,52 800,47
+              "
+            />
+            <!-- CPU area fill -->
+            <polygon
+              fill="rgba(234,179,8,0.07)"
+              points="
+                0,110 40,100 80,88 120,92 160,85 200,78 240,82 280,70 320,66 360,72 400,68 440,58 480,62 520,55 560,44 600,42 640,38 680,40 720,44 760,52 800,47
+                800,200 0,200
+              "
+            />
+            <!-- Memory line (blue) -->
+            <polyline
+              fill="none"
+              stroke="#3b82f6"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              points="
+                0,128 40,125 80,122 120,120 160,119 200,121 240,118 280,117 320,115 360,116 400,118 440,115 480,116 520,114 560,116 600,113 640,115 680,117 720,116 760,114 800,117
+              "
+            />
+            <!-- Error Rate line (red, mostly flat with spike) -->
+            <polyline
+              fill="none"
+              stroke="#ef4444"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+              points="
+                0,185 40,184 80,183 120,184 160,183 200,184 240,182 280,183 320,182 360,184 400,185 440,184 480,180 520,174 560,162 600,148 640,152 680,157 720,160 760,162 800,162
+              "
+            />
+            <!-- Error area fill -->
+            <polygon
+              fill="rgba(239,68,68,0.07)"
+              points="
+                0,185 40,184 80,183 120,184 160,183 200,184 240,182 280,183 320,182 360,184 400,185 440,184 480,180 520,174 560,162 600,148 640,152 680,157 720,160 760,162 800,162
+                800,200 0,200
+              "
+            />
+            <!-- Threshold line at 75% (y=50) -->
+            <line x1="0" y1="50" x2="800" y2="50" stroke="rgba(234,179,8,0.4)" stroke-width="1" stroke-dasharray="6,3"/>
+            <!-- Annotation: threshold label -->
+          </svg>
+        </div>
+        <div class="chart-x-labels">
+          <span>14:17</span>
+          <span>14:20</span>
+          <span>14:23</span>
+          <span>14:26</span>
+          <span>14:29</span>
+          <span>14:32</span>
+        </div>
+      </div>
+
+      <div class="chart-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--yellow);"></div>
+          <span>CPU avg</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--blue);"></div>
+          <span>Memory avg</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--red);"></div>
+          <span>Error rate</span>
+        </div>
+        <div class="legend-item" style="margin-left:auto;">
+          <div class="legend-dot" style="background:rgba(234,179,8,0.5);height:1px;"></div>
+          <span style="color:var(--text-3)">CPU warn threshold (75%)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Panel: node breakdown -->
+    <div class="chart-side">
+      <div class="side-section">
+        <div class="side-title">Node CPU — top 8</div>
+        <div id="node-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Alert List ── -->
+  <div class="alerts-panel">
+    <div class="alerts-header">
+      <div class="alerts-header-left">
+        <span class="section-label">Alerts</span>
+        <span class="alert-count-badge" id="alert-badge">3 active</span>
+        <div class="alert-tab-strip">
+          <button class="alert-tab active" onclick="showAlertState('active')">Active</button>
+          <button class="alert-tab" onclick="showAlertState('loading')">Loading</button>
+          <button class="alert-tab" onclick="showAlertState('empty')">Empty</button>
+          <button class="alert-tab" onclick="showAlertState('error')">Error</button>
+        </div>
+      </div>
+      <a href="#" class="section-action">View all →</a>
+    </div>
+
+    <div class="alerts-body">
+
+      <!-- State: Active alerts -->
+      <table class="alert-table active" id="state-active">
+        <thead>
+          <tr>
+            <th style="width:72px;">SEV</th>
+            <th>Message</th>
+            <th>Host</th>
+            <th style="width:90px;">Time</th>
+            <th style="width:80px;">Duration</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="sev-pill sev-crit">CRIT</span></td>
+            <td class="alert-msg">Error rate exceeded 3% threshold on api-gateway</td>
+            <td class="alert-host">api-gw-03.prod</td>
+            <td class="alert-ts">14:29:41</td>
+            <td class="alert-ts">2m 26s</td>
+            <td><button class="alert-ack">ACK</button></td>
+          </tr>
+          <tr>
+            <td><span class="sev-pill sev-warn">WARN</span></td>
+            <td class="alert-msg">CPU utilization &gt; 75% sustained for 5+ minutes</td>
+            <td class="alert-host">worker-07.prod</td>
+            <td class="alert-ts">14:26:18</td>
+            <td class="alert-ts">5m 49s</td>
+            <td><button class="alert-ack">ACK</button></td>
+          </tr>
+          <tr>
+            <td><span class="sev-pill sev-warn">WARN</span></td>
+            <td class="alert-msg">Disk I/O latency p99 &gt; 80ms on NVMe array</td>
+            <td class="alert-host">db-primary-01.prod</td>
+            <td class="alert-ts">14:24:55</td>
+            <td class="alert-ts">7m 12s</td>
+            <td><button class="alert-ack">ACK</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- State: Loading -->
+      <div class="state-loading" id="state-loading">
+        <div class="skeleton-row">
+          <div class="skel" style="width:52px;flex-shrink:0;"></div>
+          <div class="skel" style="width:55%;"></div>
+          <div class="skel" style="width:12%;margin-left:auto;"></div>
+          <div class="skel" style="width:8%;"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skel" style="width:52px;flex-shrink:0;"></div>
+          <div class="skel" style="width:40%;"></div>
+          <div class="skel" style="width:12%;margin-left:auto;"></div>
+          <div class="skel" style="width:8%;"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skel" style="width:52px;flex-shrink:0;"></div>
+          <div class="skel" style="width:62%;"></div>
+          <div class="skel" style="width:12%;margin-left:auto;"></div>
+          <div class="skel" style="width:8%;"></div>
+        </div>
+      </div>
+
+      <!-- State: Empty -->
+      <div class="state-empty" id="state-empty">
+        <svg class="empty-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="16" cy="16" r="13"/>
+          <polyline points="10,16 14,20 22,12"/>
+        </svg>
+        <div class="empty-title">No active alerts</div>
+        <div class="empty-sub">All services operating within thresholds.<br>Last checked 14:32:07.</div>
+        <button class="empty-action">Configure alert rules →</button>
+      </div>
+
+      <!-- State: Error -->
+      <div class="state-error" id="state-error">
+        <div class="error-icon">!</div>
+        <div class="error-body">
+          <div class="error-title">Alert sync failed: returned 503 from alertmanager-01.prod</div>
+          <div class="error-detail">Retrying 2/5 — next attempt in 12s. If this persists, check alertmanager health at :9093/status.</div>
+          <div class="error-actions">
+            <button class="btn-retry">Retry now</button>
+            <button class="btn-dismiss">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /alerts-body -->
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-items">
+        <div class="status-item">
+          <span class="status-dot ok" style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+          <span>Prometheus <span class="status-val">connected</span></span>
+        </div>
+        <div class="status-item">
+          <span>Grafana <span class="status-val">linked</span></span>
+        </div>
+        <div class="status-item">
+          <span>Alertmanager <span class="status-val" style="color:var(--red);">degraded</span></span>
+        </div>
+      </div>
+      <div class="status-items">
+        <span>data lag: <span class="status-val">4s</span></span>
+        <span>retention: <span class="status-val">15d</span></span>
+        <span style="color:var(--text-3)">sysops v2.4.1</span>
+      </div>
+    </div>
+
+  </div><!-- /alerts-panel -->
+
+</div><!-- /main -->
+
+<script>
+  // ── Sparkline generator ──
+  function makeSpark(id, data, color) {
+    const wrap = document.getElementById(id);
+    if (!wrap) return;
+    const max = Math.max(...data);
+    data.forEach(v => {
+      const bar = document.createElement('div');
+      bar.className = 'spark-bar';
+      bar.style.height = Math.round((v / max) * 100) + '%';
+      wrap.appendChild(bar);
+    });
+  }
+
+  makeSpark('spark-cpu', [38,42,44,41,47,52,58,55,61,63,68,72,70,74,76,72,75,78,76,80,78]);
+  makeSpark('spark-mem', [60,61,60,61,62,61,60,62,61,62,61,62,62,61,63,61,62,61,62,62,62]);
+  makeSpark('spark-req', [15,14,15,14,14,15,13,14,13,14,14,13,14,14,13,14,14,14,14,14,14]);
+  makeSpark('spark-err', [0.3,0.2,0.4,0.3,0.4,0.5,0.6,0.7,1.0,1.4,1.8,2.2,2.6,2.9,3.1,3.4,3.7,3.8,3.8,3.8,3.8]);
+
+  // ── Node list ──
+  const nodes = [
+    { name: 'worker-07', cpu: 92, color: '#ef4444' },
+    { name: 'worker-11', cpu: 88, color: '#ef4444' },
+    { name: 'api-gw-03', cpu: 84, color: '#f97316' },
+    { name: 'worker-04', cpu: 79, color: '#eab308' },
+    { name: 'worker-02', cpu: 74, color: '#eab308' },
+    { name: 'api-gw-01', cpu: 69, color: '#3b82f6' },
+    { name: 'worker-09', cpu: 61, color: '#3b82f6' },
+    { name: 'db-rep-02',  cpu: 48, color: '#22c55e' },
+  ];
+  const nl = document.getElementById('node-list');
+  nodes.forEach(n => {
+    nl.innerHTML += `
+      <div class="node-row">
+        <span class="node-name">${n.name}.prod</span>
+        <span class="node-val" style="color:${n.color}">${n.cpu}%</span>
+        <div class="node-bar-wrap">
+          <div class="node-bar-fill" style="width:${n.cpu}%;background:${n.color};"></div>
+        </div>
+      </div>`;
+  });
+
+  // ── Alert state tab switcher ──
+  function showAlertState(state) {
+    ['active','loading','empty','error'].forEach(s => {
+      const el = document.getElementById('state-' + s);
+      if (!el) return;
+      if (s === 'active') {
+        el.classList.toggle('active', s === state);
+      } else {
+        el.classList.toggle('active', s === state);
+      }
+    });
+    // Update badge
+    const badge = document.getElementById('alert-badge');
+    const labels = { active: '3 active', loading: '…', empty: '0 active', error: 'sync error' };
+    badge.textContent = labels[state] || '';
+
+    document.querySelectorAll('.alert-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.toLowerCase() === state);
+    });
+  }
+
+  // Chart timerange buttons
+  document.querySelectorAll('.chart-ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.chart-ctrl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

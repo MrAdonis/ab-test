@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driftnote — 本地优先的双链笔记</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ─── RESET & BASE ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:       #0f0f0e;
+    --ink-2:     #1c1c1a;
+    --ink-3:     #2a2a27;
+    --muted:     #6b6b66;
+    --muted-2:   #9a9a93;
+    --paper:     #f6f3ee;
+    --paper-2:   #eeebe4;
+    --paper-3:   #e4e0d8;
+    --accent:    #d4622a;      /* 只一个：warm amber-red */
+    --accent-dim: #d4622a22;
+    --mono: 'Geist Mono', 'SF Mono', monospace;
+    --display: 'Outfit', 'PingFang SC', 'Noto Sans SC', sans-serif;
+    --body: -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+    --r: 6px;
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--body);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE TEXTURE OVERLAY ─── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 999;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.45;
+    mix-blend-mode: multiply;
+  }
+
+  /* ─── TYPOGRAPHY ─── */
+  .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 48px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--paper-3);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex; gap: 32px; list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 150ms ease-out;
+  }
+  .nav-links a:hover { color: var(--ink); }
+
+  .nav-cta {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 8px 20px;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 150ms ease-out, transform 100ms ease-out;
+    text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--ink-2); }
+  .nav-cta:active { transform: scale(0.98); }
+
+  /* ─── HERO: asymmetric split ─── */
+  .hero {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding-top: 80px;
+  }
+
+  .hero-left {
+    padding: 80px 48px 80px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--paper-3);
+  }
+
+  .hero-right {
+    padding: 80px 48px 80px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: var(--paper-2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease-out 0.1s forwards;
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(44px, 5.5vw, 76px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.2s forwards;
+  }
+
+  .hero-title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--muted);
+    max-width: 380px;
+    margin-bottom: 44px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.35s forwards;
+  }
+
+  .hero-actions {
+    display: flex; align-items: center; gap: 20px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.5s forwards;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 14px 32px;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: background 150ms ease-out, transform 100ms ease-out;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 6px;
+    transition: color 150ms ease-out;
+  }
+  .btn-ghost:hover { color: var(--ink); }
+
+  /* Hero right: editor mockup */
+  .editor-mockup {
+    background: var(--ink);
+    border-radius: 10px 10px 0 0;
+    overflow: hidden;
+    box-shadow: 0 -20px 80px rgba(15,15,14,0.15);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #c9c5bb;
+    opacity: 0;
+    animation: slideUp 0.8s ease-out 0.6s forwards;
+  }
+
+  .editor-titlebar {
+    background: var(--ink-2);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--ink-3);
+  }
+  .editor-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .editor-dot.r { background: #ff5f57; }
+  .editor-dot.y { background: #febc2e; }
+  .editor-dot.g { background: #28c840; }
+  .editor-filename {
+    margin-left: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .editor-body { padding: 24px 24px 32px; line-height: 1.8; }
+  .editor-h1 { font-size: 18px; font-weight: 700; color: #f0ece4; margin-bottom: 12px; }
+  .editor-text { color: #9a9890; margin-bottom: 8px; font-size: 13px; }
+  .editor-link { color: var(--accent); text-decoration: none; }
+  .editor-link:hover { text-decoration: underline; }
+  .editor-tag { color: #6b9a6b; font-size: 12px; }
+  .editor-cursor {
+    display: inline-block; width: 2px; height: 15px;
+    background: var(--accent); vertical-align: middle;
+    animation: blink 1.1s step-end infinite;
+  }
+
+  /* ─── SECTION BASE ─── */
+  section { position: relative; }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  /* ─── FEATURES: bento grid ─── */
+  .features {
+    padding: 120px 0;
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .features-header {
+    padding: 0 48px 72px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: end;
+  }
+
+  .features-title {
+    font-family: var(--display);
+    font-size: clamp(36px, 4vw, 56px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--paper);
+  }
+
+  .features-desc {
+    font-size: 16px;
+    color: var(--muted-2);
+    line-height: 1.75;
+    max-width: 340px;
+  }
+
+  .bento {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 2px;
+    background: var(--ink-3);
+  }
+
+  .bento-item {
+    background: var(--ink);
+    padding: 40px;
+    transition: background 200ms ease-out;
+    cursor: default;
+  }
+  .bento-item:hover { background: var(--ink-2); }
+
+  /* big item spans 2 columns */
+  .bento-item.big {
+    grid-column: span 2;
+  }
+
+  .bento-icon {
+    width: 40px; height: 40px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+    font-size: 18px;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+
+  .bento-name {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--paper);
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .bento-desc {
+    font-size: 14px;
+    color: var(--muted-2);
+    line-height: 1.7;
+  }
+
+  .bento-visual {
+    margin-top: 32px;
+    background: var(--ink-3);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #6b6b66;
+    border: 1px solid var(--ink-3);
+  }
+
+  .bento-visual .kw { color: #7fa8c8; }
+  .bento-visual .str { color: #91b97a; }
+  .bento-visual .cm { color: var(--muted); }
+
+  /* ─── WORKFLOW: horizontal scroll steps ─── */
+  .workflow {
+    padding: 120px 0;
+    background: var(--paper-2);
+  }
+
+  .workflow-header {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px 64px;
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(32px, 3.5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+
+  .workflow-steps {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .step {
+    padding: 0 32px 0 0;
+    border-right: 1px solid var(--paper-3);
+    position: relative;
+  }
+  .step:last-child { border-right: none; padding-right: 0; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .step-title {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 14px;
+    letter-spacing: -0.01em;
+  }
+
+  .step-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.75;
+  }
+
+  .step + .step { padding-left: 32px; }
+
+  /* ─── DEMO: terminal-style ─── */
+  .demo {
+    padding: 120px 0;
+    background: var(--paper);
+  }
+
+  .demo-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .demo-text .section-title { margin-bottom: 24px; }
+
+  .demo-prose {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 36px;
+  }
+
+  .demo-specs {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .spec-row {
+    display: flex; align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--paper-3);
+  }
+  .spec-row:last-child { border-bottom: 1px solid var(--paper-3); }
+
+  .spec-check {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 20px;
+  }
+
+  .spec-label {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .spec-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted-2);
+    margin-left: auto;
+  }
+
+  .demo-visual {
+    background: var(--ink);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15,15,14,0.12);
+  }
+
+  .demo-bar {
+    background: var(--ink-2);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--ink-3);
+  }
+  .demo-bar-dots { display: flex; gap: 7px; }
+  .demo-bar-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-3); }
+
+  .demo-search {
+    background: var(--ink-3);
+    border-radius: 4px;
+    padding: 5px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    flex: 1;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .demo-search-icon { color: var(--muted); font-size: 11px; }
+
+  .demo-content {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    height: 360px;
+  }
+
+  .demo-sidebar {
+    border-right: 1px solid var(--ink-3);
+    padding: 16px 0;
+    overflow: hidden;
+  }
+
+  .demo-sidebar-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 4px 16px 12px;
+  }
+
+  .demo-note {
+    padding: 9px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #8a8880;
+    cursor: default;
+    border-left: 2px solid transparent;
+    transition: all 150ms;
+  }
+  .demo-note:hover { color: var(--paper); background: var(--ink-2); }
+  .demo-note.active {
+    color: var(--paper);
+    border-left-color: var(--accent);
+    background: var(--ink-2);
+  }
+  .demo-note-date { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .demo-editor {
+    padding: 28px 32px;
+    overflow: hidden;
+  }
+
+  .demo-editor-title {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--paper);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .demo-editor-line {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #7a7870;
+    line-height: 1.9;
+  }
+  .demo-editor-line .hl { color: #c9c5bb; }
+  .demo-editor-line .link { color: var(--accent); }
+  .demo-editor-line .tag { color: #6b9a6b; }
+
+  /* ─── PRICING ─── */
+  .pricing {
+    padding: 120px 0;
+    background: var(--paper-2);
+    border-top: 1px solid var(--paper-3);
+  }
+
+  .pricing-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  .pricing-header {
+    margin-bottom: 72px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: end;
+  }
+
+  .pricing-header .section-title { color: var(--ink); }
+
+  .pricing-note {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 320px;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 24px;
+  }
+
+  .price-card {
+    background: var(--paper);
+    border: 1px solid var(--paper-3);
+    border-radius: 10px;
+    padding: 40px;
+    position: relative;
+  }
+
+  .price-card.featured {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .price-badge {
+    position: absolute;
+    top: 28px; right: 28px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .price-tier {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 16px;
+  }
+  .price-card.featured .price-tier { color: var(--muted-2); }
+
+  .price-amount {
+    font-family: var(--display);
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .price-card.featured .price-amount { color: var(--paper); }
+
+  .price-currency {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 400;
+    vertical-align: super;
+    margin-right: 2px;
+  }
+
+  .price-suffix {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 36px;
+  }
+  .price-card.featured .price-suffix { color: var(--muted-2); }
+
+  .price-divider {
+    height: 1px;
+    background: var(--paper-3);
+    margin-bottom: 28px;
+  }
+  .price-card.featured .price-divider { background: var(--ink-3); }
+
+  .price-features {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 14px;
+    margin-bottom: 40px;
+  }
+
+  .price-feature {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .price-card.featured .price-feature { color: var(--muted-2); }
+
+  .price-feature-check {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .price-cta {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: all 150ms ease-out;
+    text-decoration: none;
+  }
+
+  .price-cta.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--paper-3);
+  }
+  .price-cta.secondary:hover { border-color: var(--ink); color: var(--ink); }
+
+  .price-cta.primary {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+  }
+  .price-cta.primary:hover { filter: brightness(1.1); }
+  .price-cta:active { transform: scale(0.98); }
+
+  /* ─── CTA FINAL ─── */
+  .final-cta {
+    padding: 160px 0;
+    background: var(--ink);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .final-cta::before {
+    content: 'DRIFTNOTE';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--display);
+    font-size: clamp(80px, 12vw, 180px);
+    font-weight: 900;
+    color: var(--ink-2);
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .final-cta-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .final-cta-title {
+    font-family: var(--display);
+    font-size: clamp(40px, 5vw, 68px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--paper);
+    line-height: 1.05;
+    margin-bottom: 28px;
+  }
+  .final-cta-title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .final-cta-sub {
+    font-size: 17px;
+    color: var(--muted-2);
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+
+  .final-cta-actions {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+  }
+
+  .btn-outline {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--muted-2);
+    border: 1px solid var(--ink-3);
+    padding: 14px 32px;
+    border-radius: var(--r);
+    text-decoration: none;
+    transition: all 150ms ease-out;
+  }
+  .btn-outline:hover { border-color: var(--muted-2); color: var(--paper); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--ink-2);
+    border-top: 1px solid var(--ink-3);
+    padding: 40px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted-2);
+  }
+  .footer-logo span { color: var(--accent); }
+
+  .footer-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* scroll-reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* stagger children */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+  .reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0ms; }
+  .reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: none; transition-delay: 80ms; }
+  .reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: none; transition-delay: 160ms; }
+  .reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: none; transition-delay: 240ms; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .hero-left { padding: 60px 24px; }
+
+    .bento { grid-template-columns: 1fr 1fr; padding: 0 24px; }
+    .bento-item.big { grid-column: span 2; }
+
+    .workflow-steps { grid-template-columns: 1fr 1fr; gap: 32px; padding: 0 24px; }
+    .step + .step { padding-left: 0; }
+    .step { border-right: none; padding-right: 0; border-bottom: 1px solid var(--paper-3); padding-bottom: 24px; }
+    .step:last-child { border-bottom: none; }
+
+    .demo-inner { grid-template-columns: 1fr; padding: 0 24px; }
+    .demo-visual { display: none; }
+
+    .pricing-grid { grid-template-columns: 1fr; }
+    .pricing-header { grid-template-columns: 1fr; }
+
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .container, .workflow-header, .features-header { padding: 0 24px; }
+    footer { flex-direction: column; gap: 12px; text-align: center; padding: 32px 24px; }
+  }
+
+  @media (max-width: 600px) {
+    .bento { grid-template-columns: 1fr; }
+    .bento-item.big { grid-column: span 1; }
+    .pricing-inner { padding: 0 24px; }
+    .final-cta-actions { flex-direction: column; }
+  }
+
+  /* reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">drift<span>.</span>note</div>
+  <ul class="nav-links">
+    <li><a href="#features">功能</a></li>
+    <li><a href="#workflow">工作流</a></li>
+    <li><a href="#pricing">定价</a></li>
+  </ul>
+  <a href="#pricing" class="nav-cta">买断 ¥99</a>
+</nav>
+
+<!-- HERO: split layout, VARIANCE 7 → asymmetric, no centered hero -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">本地优先 · Markdown 原生</div>
+    <h1 class="hero-title">思维<br>不应该<br>在<em>云端漂移</em></h1>
+    <p class="hero-sub">
+      Driftnote 把你的笔记存在本地。双链、Markdown、全文搜索——一次买断，永久使用。
+    </p>
+    <div class="hero-actions">
+      <a href="#pricing" class="btn-primary">¥99 买断 →</a>
+      <a href="#workflow" class="btn-ghost">看工作流演示 ↓</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="editor-mockup">
+      <div class="editor-titlebar">
+        <div class="editor-dot r"></div>
+        <div class="editor-dot y"></div>
+        <div class="editor-dot g"></div>
+        <span class="editor-filename">weekly-review.md</span>
+      </div>
+      <div class="editor-body">
+        <div class="editor-h1"># 本周复盘</div>
+        <div class="editor-text">完成了 [[Rust 异步模型]] 的学习，终于理解了</div>
+        <div class="editor-text"><span class="editor-tag">#async</span> 和 tokio 的关系。</div>
+        <div class="editor-text">&nbsp;</div>
+        <div class="editor-text">下周要整理 → <a class="editor-link" href="#">[[系统设计笔记]]</a></div>
+        <div class="editor-text">参考 <a class="editor-link" href="#">[[分布式事务]]</a></div>
+        <div class="editor-text">&nbsp;</div>
+        <div class="editor-text">```rust</div>
+        <div class="editor-text">async fn fetch(url: &str) -&gt; Result&lt;String&gt; {</div>
+        <div class="editor-text">&nbsp;&nbsp;// 本地执行，不上传<span class="editor-cursor"></span></div>
+        <div class="editor-text">}</div>
+        <div class="editor-text">```</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES: bento grid, no section eyebrow here -->
+<section class="features" id="features">
+  <div class="features-header reveal">
+    <h2 class="features-title">为独立<br>开发者设计</h2>
+    <p class="features-desc">
+      不是又一个 Notion 克隆。Driftnote 从工程师的工作方式出发——文件本地存储，Git 友好，Markdown 原生。
+    </p>
+  </div>
+
+  <div class="bento reveal-stagger">
+    <!-- big item -->
+    <div class="bento-item big">
+      <div class="bento-icon">//</div>
+      <div class="bento-name">本地优先存储</div>
+      <div class="bento-desc">
+        笔记以 .md 文件存在你的硬盘。用 Git 管版本，用 rsync 备份，或者什么都不做。数据完全属于你。
+      </div>
+      <div class="bento-visual">
+        <span class="kw">~</span>/notes/2025/<br>
+        ├── weekly-review.md<br>
+        ├── rust-async.md<br>
+        └── system-design/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── cap-theorem.md<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── <span class="str">distributed-tx.md</span> <span class="cm"># ← 刚创建</span>
+      </div>
+    </div>
+
+    <!-- small item -->
+    <div class="bento-item">
+      <div class="bento-icon">[[</div>
+      <div class="bento-name">双链笔记</div>
+      <div class="bento-desc">
+        用 <code style="font-family:var(--mono);font-size:12px;color:#c9c5bb;">[[页面名]]</code> 创建跨笔记引用。图谱视图自动生成，不需要手动维护。
+      </div>
+    </div>
+
+    <!-- small item -->
+    <div class="bento-item">
+      <div class="bento-icon">md</div>
+      <div class="bento-name">Markdown 原生</div>
+      <div class="bento-desc">
+        实时预览，代码语法高亮，LaTeX 公式，表格，任务列表。写完即是成品。
+      </div>
+    </div>
+
+    <!-- small item -->
+    <div class="bento-item">
+      <div class="bento-icon">/s</div>
+      <div class="bento-name">全文搜索</div>
+      <div class="bento-desc">
+        本地索引，搜索结果即时出现。数千个文件也不卡顿。
+      </div>
+    </div>
+
+    <!-- big item -->
+    <div class="bento-item big">
+      <div class="bento-icon">↗</div>
+      <div class="bento-name">导入无障碍</div>
+      <div class="bento-desc">
+        从 Obsidian、Bear、Typora、Notion 导入——它们导出的 Markdown 文件直接拖入即可。没有专有格式，没有锁定。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW: numbered horizontal steps, eyebrow used here -->
+<section class="workflow" id="workflow">
+  <div class="workflow-header">
+    <div class="label" style="margin-bottom: 20px;">工作流</div>
+    <h2 class="section-title reveal">从想法到知识库<br>四步无摩擦</h2>
+  </div>
+
+  <div class="workflow-steps reveal-stagger">
+    <div class="step">
+      <span class="step-num">01</span>
+      <div class="step-title">快速捕捉</div>
+      <p class="step-desc">
+        全局快捷键唤出输入框。想法来了，打字，回车。不需要切窗口，不需要选标签。
+      </p>
+    </div>
+
+    <div class="step">
+      <span class="step-num">02</span>
+      <div class="step-title">写 Markdown</div>
+      <p class="step-desc">
+        编辑器里就是 .md 文件。代码块、表格、链接——和你在 VSCode 里写的一样。
+      </p>
+    </div>
+
+    <div class="step">
+      <span class="step-num">03</span>
+      <div class="step-title">建双链关系</div>
+      <p class="step-desc">
+        输入 [[ 时出现补全。笔记之间的引用自动追踪，图谱自动更新。
+      </p>
+    </div>
+
+    <div class="step">
+      <span class="step-num">04</span>
+      <div class="step-title">随时检索</div>
+      <p class="step-desc">
+        ⌘K 全文搜索。关键词、标签、双链路径都能搜。本地索引，毫秒级响应。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO: split with interactive mockup, no eyebrow (alternating rule) -->
+<section class="demo">
+  <div class="demo-inner">
+    <div class="demo-text reveal">
+      <h2 class="section-title">你的笔记<br>只跑在你的机器上</h2>
+      <p class="demo-prose">
+        不需要创建账号，不需要绑定邮箱，不需要订阅才能用高级功能。
+        买了就是你的，永远是你的。
+      </p>
+      <div class="demo-specs">
+        <div class="spec-row">
+          <span class="spec-check">✓</span>
+          <span class="spec-label">全部数据本地存储</span>
+          <span class="spec-val">.md 文件格式</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-check">✓</span>
+          <span class="spec-label">无订阅费</span>
+          <span class="spec-val">一次买断</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-check">✓</span>
+          <span class="spec-label">macOS 原生</span>
+          <span class="spec-val">Apple Silicon + Intel</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-check">✓</span>
+          <span class="spec-label">离线完整可用</span>
+          <span class="spec-val">不需要网络</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-check">✓</span>
+          <span class="spec-label">Git 友好</span>
+          <span class="spec-val">文本文件直接 commit</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-visual reveal">
+      <div class="demo-bar">
+        <div class="demo-bar-dots">
+          <div class="demo-bar-dot" style="background:#ff5f57"></div>
+          <div class="demo-bar-dot" style="background:#febc2e"></div>
+          <div class="demo-bar-dot" style="background:#28c840"></div>
+        </div>
+        <div class="demo-search">
+          <span class="demo-search-icon">⌘K</span>
+          rust async executor
+        </div>
+      </div>
+
+      <div class="demo-content">
+        <div class="demo-sidebar">
+          <div class="demo-sidebar-label">最近笔记</div>
+          <div class="demo-note active">
+            rust-async.md
+            <div class="demo-note-date">今天</div>
+          </div>
+          <div class="demo-note">
+            weekly-review.md
+            <div class="demo-note-date">昨天</div>
+          </div>
+          <div class="demo-note">
+            cap-theorem.md
+            <div class="demo-note-date">周一</div>
+          </div>
+          <div class="demo-note">
+            distributed-tx.md
+            <div class="demo-note-date">上周</div>
+          </div>
+          <div class="demo-note">
+            系统设计笔记.md
+            <div class="demo-note-date">上周</div>
+          </div>
+        </div>
+
+        <div class="demo-editor">
+          <div class="demo-editor-title">Rust 异步模型</div>
+          <div class="demo-editor-line"><span class="hl">## executor 是什么</span></div>
+          <div class="demo-editor-line">&nbsp;</div>
+          <div class="demo-editor-line">Future 是惰性的，需要 <span class="hl">executor</span></div>
+          <div class="demo-editor-line">驱动轮询。tokio::spawn 把</div>
+          <div class="demo-editor-line">future 交给运行时调度。</div>
+          <div class="demo-editor-line">&nbsp;</div>
+          <div class="demo-editor-line">关联笔记: <span class="link">[[async-await]]</span></div>
+          <div class="demo-editor-line"><span class="link">[[tokio-internals]]</span></div>
+          <div class="demo-editor-line">&nbsp;</div>
+          <div class="demo-editor-line"><span class="tag">#rust #async #learning</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING: 2-card layout -->
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="pricing-header reveal">
+      <div>
+        <div class="label" style="margin-bottom:16px;">定价</div>
+        <h2 class="section-title">一次买断<br>没有续费焦虑</h2>
+      </div>
+      <p class="pricing-note">
+        没有月费，没有年费，没有「基础版/专业版」陷阱。买了就是完整版。
+      </p>
+    </div>
+
+    <div class="pricing-grid reveal-stagger">
+      <!-- Free tier -->
+      <div class="price-card">
+        <div class="price-tier">免费试用</div>
+        <div class="price-amount"><span class="price-currency">¥</span>0</div>
+        <p class="price-suffix">14 天，全功能体验</p>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li class="price-feature">
+            <span class="price-feature-check">→</span>
+            全功能无限制使用 14 天
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">→</span>
+            笔记数量无上限
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">→</span>
+            本地存储，数据留在你这里
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">→</span>
+            到期后数据不删除，仍可读取
+          </li>
+        </ul>
+        <a href="#" class="price-cta secondary">下载免费试用</a>
+      </div>
+
+      <!-- Buy once -->
+      <div class="price-card featured">
+        <div class="price-badge">推荐</div>
+        <div class="price-tier">永久授权</div>
+        <div class="price-amount"><span class="price-currency">¥</span>99</div>
+        <p class="price-suffix">一次付清，含未来所有更新</p>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li class="price-feature">
+            <span class="price-feature-check">✓</span>
+            免费试用的全部内容
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">✓</span>
+            永久激活，无到期日
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">✓</span>
+            所有未来版本免费更新
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">✓</span>
+            2 台设备同时使用
+          </li>
+          <li class="price-feature">
+            <span class="price-feature-check">✓</span>
+            邮件优先支持
+          </li>
+        </ul>
+        <a href="#" class="price-cta primary">立即买断 ¥99</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA: full-width dark, no eyebrow -->
+<section class="final-cta">
+  <div class="final-cta-inner reveal">
+    <h2 class="final-cta-title">把思维<br>留在本地<em>。</em></h2>
+    <p class="final-cta-sub">¥99 买断，14 天无条件退款。</p>
+    <div class="final-cta-actions">
+      <a href="#" class="btn-primary" style="font-size:15px;padding:16px 40px;">立即买断 ¥99</a>
+      <a href="#" class="btn-outline">先免费试用 14 天</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">drift<span>.</span>note</div>
+  <div class="footer-meta">© 2025 Driftnote · 本地优先，数据属于你</div>
+</footer>
+
+<script>
+  // Scroll reveal observer — MOTION 6: scroll-based entrance
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Interactive demo: note switching (交互反馈 — MOTION 6 第3个动效)
+  document.querySelectorAll('.demo-note').forEach(note => {
+    note.addEventListener('click', function() {
+      document.querySelectorAll('.demo-note').forEach(n => n.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

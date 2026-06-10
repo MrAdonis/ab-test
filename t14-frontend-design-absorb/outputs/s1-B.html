@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driftnote — 本地优先笔记，开发者的第二大脑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --bg: #0d0f11;
+    --bg-2: #13161a;
+    --bg-3: #1a1e24;
+    --border: #22272e;
+    --border-light: #2d3440;
+    --text-primary: #e8eaed;
+    --text-secondary: #8b9ab0;
+    --text-muted: #4a5568;
+    --accent: #4ade80;
+    --accent-dim: #166534;
+    --accent-glow: rgba(74, 222, 128, 0.12);
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Outfit', 'Noto Sans SC', sans-serif;
+    --body: 'Noto Sans SC', 'Outfit', sans-serif;
+    --radius: 8px;
+    --radius-sm: 4px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--body);
+    line-height: 1.7;
+    font-size: 16px;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: screen;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 16px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(13, 15, 17, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+
+  .nav-logo span {
+    color: var(--accent);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    transition: color 180ms ease-out;
+  }
+
+  .nav-links a:hover { color: var(--text-primary); }
+
+  .nav-cta {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 180ms ease-out, transform 100ms ease-out;
+    display: inline-block;
+  }
+
+  .nav-cta:hover { opacity: 0.88; }
+  .nav-cta:active { transform: scale(0.98); }
+
+  /* ─── HERO — ASYMMETRIC SPLIT ─── */
+  .hero {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    padding-top: 72px;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 56px 80px 48px;
+    position: relative;
+  }
+
+  .hero-left::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -1px;
+    width: 1px;
+    height: 60%;
+    background: linear-gradient(to bottom, transparent, var(--border), transparent);
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.75); }
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(48px, 5.5vw, 80px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.04em;
+    color: var(--text-primary);
+    margin-bottom: 28px;
+  }
+
+  .hero-title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    max-width: 420px;
+    margin-bottom: 48px;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 13px 32px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 180ms ease-out, transform 100ms ease-out, box-shadow 180ms ease-out;
+    display: inline-block;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+
+  .btn-primary:hover {
+    opacity: 0.88;
+    box-shadow: 0 0 24px 4px var(--accent-glow);
+  }
+
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 180ms ease-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-secondary:hover { color: var(--text-primary); }
+
+  .btn-secondary::after {
+    content: '→';
+    display: inline-block;
+    transition: transform 180ms ease-out;
+  }
+
+  .btn-secondary:hover::after { transform: translateX(3px); }
+
+  /* ─── HERO RIGHT: EDITOR MOCKUP ─── */
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 48px 80px 40px;
+    overflow: hidden;
+  }
+
+  .hero-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 60% 50%, rgba(74, 222, 128, 0.06) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .editor-window {
+    width: 100%;
+    max-width: 560px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 32px 80px rgba(0,0,0,0.6),
+      0 0 40px rgba(74, 222, 128, 0.04);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green { background: #28c840; }
+
+  .editor-tabs {
+    display: flex;
+    gap: 0;
+    margin-left: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .editor-tab {
+    padding: 4px 12px;
+    border-radius: 4px 4px 0 0;
+    color: var(--text-muted);
+    cursor: default;
+  }
+
+  .editor-tab.active {
+    background: var(--bg-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-bottom-color: var(--bg-2);
+    margin-bottom: -1px;
+  }
+
+  .editor-body {
+    display: flex;
+    min-height: 340px;
+  }
+
+  .line-nums {
+    padding: 16px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text-muted);
+    user-select: none;
+    border-right: 1px solid var(--border);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .editor-content {
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text-primary);
+    flex: 1;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .md-h1 { color: #79c0ff; font-weight: 600; }
+  .md-h2 { color: #cba6f7; font-weight: 500; }
+  .md-link-bracket { color: var(--text-muted); }
+  .md-link-text { color: var(--accent); }
+  .md-link-url { color: #ff9f0a; }
+  .md-tag { color: #ff7b72; }
+  .md-italic { color: var(--text-secondary); font-style: italic; }
+  .md-bold { color: var(--text-primary); font-weight: 600; }
+  .md-code { color: #ffa657; background: rgba(255, 166, 87, 0.1); padding: 0 3px; border-radius: 2px; }
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: var(--accent);
+    vertical-align: middle;
+    animation: blink 1.2s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .editor-statusbar {
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg-3);
+    border-top: 1px solid var(--border);
+  }
+
+  .status-accent { color: var(--accent); }
+
+  /* ─── SECTION BASE ─── */
+  section {
+    position: relative;
+  }
+
+  .container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  /* ─── FEATURES — BENTO GRID ─── */
+  .features {
+    padding: 120px 0;
+    background: var(--bg);
+  }
+
+  .features-header {
+    margin-bottom: 64px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .features-header h2 {
+    font-family: var(--display);
+    font-size: clamp(36px, 4vw, 56px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+    max-width: 560px;
+  }
+
+  .features-header h2 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: auto;
+    gap: 16px;
+  }
+
+  .bento-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 250ms ease-out, box-shadow 250ms ease-out;
+  }
+
+  .bento-card:hover {
+    border-color: var(--border-light);
+    box-shadow: 0 0 24px rgba(74, 222, 128, 0.05);
+  }
+
+  .bento-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at top left, rgba(74, 222, 128, 0.04) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 300ms ease-out;
+    pointer-events: none;
+  }
+
+  .bento-card:hover::before { opacity: 1; }
+
+  .bento-1 { grid-column: span 7; }
+  .bento-2 { grid-column: span 5; }
+  .bento-3 { grid-column: span 4; }
+  .bento-4 { grid-column: span 4; }
+  .bento-5 { grid-column: span 4; }
+
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 18px;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    line-height: 1.25;
+  }
+
+  .card-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  /* local-first card: big visual */
+  .bento-1 .card-visual {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .storage-item {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .storage-item-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .storage-item-value {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* graph viz for backlinks card */
+  .graph-viz {
+    margin-top: 24px;
+    height: 90px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .graph-viz svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ─── WORKFLOW — NUMBERED SCROLL ─── */
+  .workflow {
+    padding: 120px 0;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .workflow-header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .workflow-header h2 {
+    font-family: var(--display);
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+    max-width: 580px;
+    margin: 0 auto;
+  }
+
+  .workflow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    position: relative;
+  }
+
+  .workflow-steps::before {
+    content: '';
+    position: absolute;
+    top: 32px;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border-light), var(--border-light), transparent);
+  }
+
+  .workflow-step {
+    padding: 0 24px;
+    position: relative;
+  }
+
+  .step-num {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--accent);
+    border: 1px solid var(--border-light);
+    border-radius: 50%;
+    background: var(--bg-2);
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+    transition: border-color 250ms, box-shadow 250ms;
+  }
+
+  .workflow-step:hover .step-num {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
+  }
+
+  .step-title {
+    font-family: var(--display);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+  }
+
+  .step-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  /* ─── DEMO SECTION — TERMINAL FEEL ─── */
+  .demo {
+    padding: 120px 0;
+    background: var(--bg);
+  }
+
+  .demo-inner {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .demo-text h2 {
+    font-family: var(--display);
+    font-size: clamp(32px, 3.5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+  }
+
+  .demo-text h2 strong {
+    color: var(--accent);
+    font-weight: 800;
+  }
+
+  .demo-text p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 36px;
+  }
+
+  .feature-checklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .feature-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .feature-checklist li::before {
+    content: '→';
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .demo-terminal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+
+  .terminal-header {
+    padding: 12px 16px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .terminal-body {
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+    min-height: 260px;
+  }
+
+  .t-prompt { color: var(--accent); }
+  .t-cmd { color: var(--text-primary); }
+  .t-output { color: var(--text-secondary); }
+  .t-link { color: #79c0ff; }
+  .t-success { color: var(--accent); }
+  .t-dim { color: var(--text-muted); }
+
+  /* ─── PRICING ─── */
+  .pricing {
+    padding: 120px 0;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+  }
+
+  .pricing-header {
+    margin-bottom: 64px;
+  }
+
+  .pricing-header h2 {
+    font-family: var(--display);
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .pricing-header p {
+    font-size: 15px;
+    color: var(--text-secondary);
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .pricing-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pricing-card.featured {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.2), 0 0 40px rgba(74, 222, 128, 0.08);
+  }
+
+  .pricing-card.featured::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at top left, rgba(74, 222, 128, 0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .pricing-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .pricing-name {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .pricing-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .price-amount {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .price-currency {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .price-number {
+    font-family: var(--display);
+    font-size: 60px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .price-number.accent { color: var(--accent); }
+
+  .price-note {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+  }
+
+  .pricing-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 28px;
+  }
+
+  .pricing-features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+
+  .pricing-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .pricing-features li::before {
+    content: '✓';
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .pricing-features li.dim { color: var(--text-muted); }
+  .pricing-features li.dim::before { color: var(--text-muted); content: '—'; }
+
+  .btn-purchase {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 14px 24px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    transition: opacity 180ms ease-out, transform 100ms ease-out, box-shadow 180ms ease-out;
+  }
+
+  .btn-purchase-primary {
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+  }
+
+  .btn-purchase-primary:hover {
+    opacity: 0.88;
+    box-shadow: 0 0 24px 4px var(--accent-glow);
+  }
+
+  .btn-purchase-ghost {
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border);
+  }
+
+  .btn-purchase-ghost:hover {
+    border-color: var(--border-light);
+    color: var(--text-primary);
+  }
+
+  .btn-purchase:active { transform: scale(0.98); }
+
+  .guarantee {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* ─── CTA SECTION ─── */
+  .cta-section {
+    padding: 120px 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(74, 222, 128, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .cta-text h2 {
+    font-family: var(--display);
+    font-size: clamp(36px, 4.5vw, 60px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+  }
+
+  .cta-text h2 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .cta-text p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 480px;
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .cta-price-note {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .cta-price-note strong {
+    color: var(--accent);
+    font-size: 14px;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 40px 48px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .footer-logo span { color: var(--accent); }
+
+  .footer-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 180ms ease-out;
+  }
+
+  .footer-links a:hover { color: var(--text-secondary); }
+
+  .footer-copy {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ─── ENTRANCE ANIMATIONS ─── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 600ms ease-out, transform 600ms ease-out;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .fade-in-delay-1 { transition-delay: 80ms; }
+  .fade-in-delay-2 { transition-delay: 160ms; }
+  .fade-in-delay-3 { transition-delay: 240ms; }
+  .fade-in-delay-4 { transition-delay: 320ms; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    nav { padding: 14px 24px; }
+    .nav-links { display: none; }
+    .container { padding: 0 24px; }
+
+    .hero {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+    .hero-left { padding: 80px 24px 48px; }
+    .hero-left::before { display: none; }
+    .hero-right { padding: 40px 24px 80px; display: none; }
+
+    .bento-grid { grid-template-columns: 1fr; }
+    .bento-1, .bento-2, .bento-3, .bento-4, .bento-5 { grid-column: span 1; }
+
+    .workflow-steps {
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    .workflow-steps::before { display: none; }
+
+    .demo-inner { grid-template-columns: 1fr; gap: 40px; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .cta-inner { grid-template-columns: 1fr; gap: 40px; }
+    .cta-actions { align-items: flex-start; }
+
+    footer { flex-direction: column; gap: 20px; align-items: flex-start; }
+    .footer-links { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">drift<span>note</span><span style="color:var(--text-muted)">.app</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">功能</a></li>
+    <li><a href="#workflow">工作流</a></li>
+    <li><a href="#pricing">定价</a></li>
+  </ul>
+  <a href="#pricing" class="nav-cta">买断 ¥99</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-left">
+    <div class="hero-eyebrow">本地优先 · Markdown 原生</div>
+    <h1 class="hero-title">
+      你的笔记<br>
+      <em>只属于你</em>
+    </h1>
+    <p class="hero-desc">
+      文件存你硬盘，格式是纯文本，双链让想法连成网。
+      Driftnote 是给独立开发者造的第二大脑——没有订阅，没有云账号，一次买断。
+    </p>
+    <div class="hero-actions">
+      <a href="#pricing" class="btn-primary">立即购买 ¥99</a>
+      <a href="#workflow" class="btn-secondary">看工作流演示</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="editor-window">
+      <div class="editor-toolbar">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <div class="editor-tabs">
+          <div class="editor-tab">README.md</div>
+          <div class="editor-tab active">架构思考.md</div>
+          <div class="editor-tab">API 设计.md</div>
+        </div>
+      </div>
+      <div class="editor-body">
+        <div class="line-nums">
+          1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15
+        </div>
+        <div class="editor-content"><span class="md-h1"># 架构思考</span>
+<span class="md-tag">#系统设计</span> <span class="md-tag">#进行中</span>
+
+## 核心问题
+
+把状态管理抽到 <span class="md-code">useStore</span> 里，
+参考了 [[Zustand 学习笔记]] 里的模式。
+
+<span class="md-h2">## 双链引用</span>
+
+- 依赖 [[数据库 schema v2]]
+- 触发了 [[API 限流策略]] 的重写
+- <span class="md-link-bracket">见 </span><span class="md-link-text">[[性能基准测试]]</span>
+
+> <span class="md-italic">先跑通，再优化。</span><span class="cursor"></span></div>
+      </div>
+      <div class="editor-statusbar">
+        <span>架构思考.md</span>
+        <span><span class="status-accent">●</span> Markdown · UTF-8</span>
+        <span>行 14，列 22</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="features-header fade-in">
+      <div class="section-label">核心功能</div>
+      <h2>为开发者<br>设计的<em>每一处细节</em></h2>
+    </div>
+
+    <div class="bento-grid">
+      <!-- Card 1: Local first — wide -->
+      <div class="bento-card bento-1 fade-in">
+        <div class="card-icon">📂</div>
+        <div class="card-label">Storage</div>
+        <div class="card-title">数据就在你的硬盘</div>
+        <div class="card-desc">所有笔记以 Markdown 文件存储，路径自定义。用 Git 版本控制，用 rsync 同步，
+        用任意编辑器打开——Driftnote 只是最好的阅读和编辑界面。</div>
+        <div class="card-visual">
+          <div class="storage-item">
+            <div class="storage-item-label">格式</div>
+            <div class="storage-item-value">.md</div>
+          </div>
+          <div class="storage-item">
+            <div class="storage-item-label">云服务</div>
+            <div class="storage-item-value" style="color: #ff7b72;">零依赖</div>
+          </div>
+          <div class="storage-item">
+            <div class="storage-item-label">数据归属</div>
+            <div class="storage-item-value">你自己</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Backlinks -->
+      <div class="bento-card bento-2 fade-in fade-in-delay-1">
+        <div class="card-icon">🔗</div>
+        <div class="card-label">Graph</div>
+        <div class="card-title">双链笔记，<br>想法形成网络</div>
+        <div class="card-desc"><code style="font-family:var(--mono); font-size:13px; color:var(--accent)">[[双括号语法]]</code> 创建反向链接，
+        自动图谱可视化你的知识图。</div>
+        <div class="graph-viz">
+          <svg viewBox="0 0 240 90" fill="none">
+            <line x1="120" y1="45" x2="60" y2="20" stroke="#22272e" stroke-width="1.5"/>
+            <line x1="120" y1="45" x2="180" y2="20" stroke="#22272e" stroke-width="1.5"/>
+            <line x1="120" y1="45" x2="60" y2="70" stroke="#22272e" stroke-width="1.5"/>
+            <line x1="120" y1="45" x2="180" y2="70" stroke="#22272e" stroke-width="1.5"/>
+            <line x1="60" y1="20" x2="30" y2="45" stroke="#22272e" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="120" cy="45" r="10" fill="#166534" stroke="#4ade80" stroke-width="1.5"/>
+            <circle cx="60" cy="20" r="7" fill="#1a1e24" stroke="#2d3440" stroke-width="1"/>
+            <circle cx="180" cy="20" r="7" fill="#1a1e24" stroke="#2d3440" stroke-width="1"/>
+            <circle cx="60" cy="70" r="7" fill="#1a1e24" stroke="#2d3440" stroke-width="1"/>
+            <circle cx="180" cy="70" r="7" fill="#1a1e24" stroke="#2d3440" stroke-width="1"/>
+            <circle cx="30" cy="45" r="5" fill="#1a1e24" stroke="#22272e" stroke-width="1"/>
+            <text x="120" y="49" font-family="monospace" font-size="7" fill="#4ade80" text-anchor="middle">当前</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Card 3, 4, 5 -->
+      <div class="bento-card bento-3 fade-in">
+        <div class="card-icon">⚡</div>
+        <div class="card-label">Speed</div>
+        <div class="card-title">启动即编辑</div>
+        <div class="card-desc">不需要登录，不需要同步等待。打开即写，写完关窗——本地优先意味着没有网络延迟。</div>
+      </div>
+
+      <div class="bento-card bento-4 fade-in fade-in-delay-1">
+        <div class="card-icon">#</div>
+        <div class="card-label">Markdown</div>
+        <div class="card-title">原生 Markdown</div>
+        <div class="card-desc">完整支持 GFM，代码块语法高亮，数学公式 KaTeX，表格。写完即是最终格式。</div>
+      </div>
+
+      <div class="bento-card bento-5 fade-in fade-in-delay-2">
+        <div class="card-icon">🔍</div>
+        <div class="card-label">Search</div>
+        <div class="card-title">全文即时搜索</div>
+        <div class="card-desc">本地索引，秒级搜全库。支持正则、标签过滤、时间范围——不依赖任何外部服务。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW -->
+<section class="workflow" id="workflow">
+  <div class="container">
+    <div class="workflow-header fade-in">
+      <h2>从一个想法到知识库<br>只需四步</h2>
+    </div>
+
+    <div class="workflow-steps">
+      <div class="workflow-step fade-in">
+        <div class="step-num">01</div>
+        <div class="step-title">快速捕捉</div>
+        <div class="step-desc">全局快捷键 <code style="font-family:var(--mono); color:var(--accent); font-size:12px">⌘K</code> 打开速记面板，
+        不打断当前工作流。想法先记下来，整理是以后的事。</div>
+      </div>
+
+      <div class="workflow-step fade-in fade-in-delay-1">
+        <div class="step-num">02</div>
+        <div class="step-title">Markdown 成型</div>
+        <div class="step-desc">所见即所得的 Markdown 编辑，实时预览。
+        代码块，表格，任务列表——开发者的写作方式。</div>
+      </div>
+
+      <div class="workflow-step fade-in fade-in-delay-2">
+        <div class="step-num">03</div>
+        <div class="step-title">双链关联</div>
+        <div class="step-desc">输入 <code style="font-family:var(--mono); color:var(--accent); font-size:12px">[[</code> 触发笔记搜索，
+        建立反向链接。知识不再是孤岛，而是互联的网络。</div>
+      </div>
+
+      <div class="workflow-step fade-in fade-in-delay-3">
+        <div class="step-num">04</div>
+        <div class="step-title">图谱洞察</div>
+        <div class="step-desc">知识图谱展示笔记间的隐性连接，
+        发现自己都没意识到的思维模式和知识集群。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO — split layout, editor feel -->
+<section class="demo">
+  <div class="container">
+    <div class="demo-inner">
+      <div class="demo-text fade-in">
+        <div class="section-label">工作流演示</div>
+        <h2>让 Git 管理<br>你的<strong>笔记版本</strong></h2>
+        <p>
+          因为笔记是纯 Markdown 文件，你可以把整个 vault 当 Git 仓库。
+          分支写草稿，merge 确认，revert 找回。开发者最熟悉的工具，用在最重要的知识上。
+        </p>
+        <ul class="feature-checklist">
+          <li>完整的 diff 历史，每次改动清晰可见</li>
+          <li>多设备同步只需 git pull / push</li>
+          <li>私有 repo 意味着笔记绝对私密</li>
+          <li>支持任意外部编辑器同时编辑</li>
+        </ul>
+      </div>
+
+      <div class="demo-terminal fade-in fade-in-delay-1">
+        <div class="terminal-header">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+          <span style="margin-left:8px">~/vault — zsh</span>
+        </div>
+        <div class="terminal-body">
+<div><span class="t-prompt">~ </span><span class="t-cmd">cd ~/vault && git status</span></div>
+<div class="t-output">On branch main</div>
+<div class="t-output">Changes not staged for commit:</div>
+<div><span class="t-dim">  modified: </span><span class="t-link">架构思考.md</span></div>
+<div><span class="t-dim">  new file:  </span><span class="t-link">API 限流策略.md</span></div>
+<br>
+<div><span class="t-prompt">~ </span><span class="t-cmd">git add . && git commit -m "feat: 添加限流方案"</span></div>
+<div class="t-output">[main 3a7f2c1] feat: 添加限流方案</div>
+<div class="t-output"> 2 files changed, 47 insertions(+)</div>
+<br>
+<div><span class="t-prompt">~ </span><span class="t-cmd">git push origin main</span></div>
+<div class="t-success">✓ 同步完成  →  github.com/you/vault</div>
+<div class="t-dim">  private · 47 notes · last sync 2s ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="pricing-header fade-in">
+      <div class="section-label">定价</div>
+      <h2>简单定价，<br>没有后续账单</h2>
+      <p>买一次，用到你不想用为止。没有订阅，没有功能墙，没有云账号。</p>
+    </div>
+
+    <div class="pricing-grid fade-in">
+      <!-- Free -->
+      <div class="pricing-card">
+        <div class="pricing-name">免费试用</div>
+        <div class="pricing-desc">不需要注册，下载即用。30 天后部分高级功能需要激活码。</div>
+        <div class="price-amount">
+          <span class="price-currency">¥</span>
+          <span class="price-number">0</span>
+        </div>
+        <div class="price-note">30 天全功能体验</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>无限笔记存储</li>
+          <li>完整 Markdown 支持</li>
+          <li>全文搜索</li>
+          <li class="dim">双链 + 知识图谱</li>
+          <li class="dim">全局快捷键</li>
+          <li class="dim">版本历史（Git 集成）</li>
+        </ul>
+        <a href="#" class="btn-purchase btn-purchase-ghost">下载 macOS 版</a>
+      </div>
+
+      <!-- Lifetime -->
+      <div class="pricing-card featured">
+        <div class="pricing-badge">买断 · 永久授权</div>
+        <div class="pricing-name">终身许可</div>
+        <div class="pricing-desc">一次付款，所有功能永久解锁。包含未来 2 年的重大版本更新。</div>
+        <div class="price-amount">
+          <span class="price-currency">¥</span>
+          <span class="price-number accent">99</span>
+        </div>
+        <div class="price-note">一次性付款 · 无订阅</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>无限笔记存储</li>
+          <li>完整 Markdown 支持</li>
+          <li>全文搜索</li>
+          <li>双链 + 知识图谱</li>
+          <li>全局快捷键</li>
+          <li>版本历史（Git 集成）</li>
+          <li>2 台设备授权</li>
+          <li>优先支持</li>
+        </ul>
+        <a href="#" class="btn-purchase btn-purchase-primary">立即购买 ¥99</a>
+        <div class="guarantee">7 天无理由退款 · 支付宝 / 微信支付</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-inner">
+      <div class="cta-text fade-in">
+        <h2>你的想法<br>不应该<em>租着放</em></h2>
+        <p>
+          每一个订阅笔记工具，都意味着你的知识被托管在别人的服务器上。
+          换个工具，数据迁移；公司倒闭，笔记全无。
+          <br><br>
+          Driftnote 的设计哲学是：你的文件，永远是你的文件。
+        </p>
+      </div>
+
+      <div class="cta-actions fade-in fade-in-delay-2">
+        <div class="cta-price-note">
+          买断价格 <strong>¥99</strong>
+        </div>
+        <a href="#pricing" class="btn-primary" style="padding: 14px 40px; font-size: 15px;">立即购买</a>
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--text-muted); text-align: right;">
+          7 天退款保障
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">drift<span>note</span></div>
+  <ul class="footer-links">
+    <li><a href="#">下载</a></li>
+    <li><a href="#">文档</a></li>
+    <li><a href="#">更新日志</a></li>
+    <li><a href="#">联系</a></li>
+  </ul>
+  <div class="footer-copy">© 2024 Driftnote</div>
+</footer>
+
+<script>
+  // Intersection Observer for fade-in animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Hero elements animate immediately
+  document.querySelectorAll('.hero .fade-in').forEach(el => {
+    setTimeout(() => el.classList.add('visible'), 100);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ops Dashboard</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d0f11;
+    --surface:   #13171a;
+    --border:    #1e2428;
+    --border-hi: #2a3038;
+    --text:      #c8cdd3;
+    --text-dim:  #5a6472;
+    --text-hi:   #e8ecf0;
+    --accent:    #3b9eff;
+    --green:     #2ecc71;
+    --yellow:    #f5a623;
+    --red:       #e74c3c;
+    --red-bg:    rgba(231,76,60,.08);
+    --mono:      "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+    --sans:      -apple-system, "SF Pro Text", "Inter Display", "Helvetica Neue", sans-serif;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-rows: 44px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .topbar-brand {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-hi);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .topbar-brand span { color: var(--accent); }
+  .topbar-sep { width: 1px; height: 20px; background: var(--border-hi); }
+  .env-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(59,158,255,.12);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .clock {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    tabular-nums: auto;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px rgba(46,204,113,.55);
+  }
+  .status-label { font-size: 11px; color: var(--text-dim); }
+
+  /* ── Main Content ── */
+  .main {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* ── Section Header ── */
+  .section-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim);
+  }
+  .section-meta { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+
+  /* ── KPI Row ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-card {
+    padding: 12px 16px 14px;
+    border-right: 1px solid var(--border);
+    position: relative;
+    transition: background 120ms ease-out;
+  }
+  .kpi-card:last-child { border-right: none; }
+  .kpi-card:hover { background: rgba(255,255,255,.015); }
+  .kpi-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-hi);
+    margin-bottom: 6px;
+  }
+  .kpi-value .unit { font-size: 13px; font-weight: 400; color: var(--text-dim); margin-left: 2px; }
+  .kpi-delta {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .kpi-delta.up   { color: var(--red); }
+  .kpi-delta.down { color: var(--green); }
+  .kpi-delta.warn { color: var(--yellow); }
+  .kpi-delta.ok   { color: var(--green); }
+
+  /* Inline sparkline */
+  .sparkline { display: block; margin-top: 8px; }
+
+  /* Status indicator dot */
+  .kpi-status {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .kpi-status.ok     { background: var(--green); }
+  .kpi-status.warn   { background: var(--yellow); }
+  .kpi-status.crit   { background: var(--red); }
+
+  /* Gauge bar */
+  .gauge-bar {
+    height: 2px;
+    background: var(--border-hi);
+    border-radius: 1px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .gauge-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 300ms ease-out;
+  }
+  .gauge-fill.ok   { background: var(--green); }
+  .gauge-fill.warn { background: var(--yellow); }
+  .gauge-fill.crit { background: var(--red); }
+
+  /* ── Chart Area ── */
+  .chart-area {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .chart-pane {
+    padding: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chart-pane-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chart-pane-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-dim);
+  }
+  .chart-tabs {
+    display: flex;
+    gap: 0;
+  }
+  .chart-tab {
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--text-dim);
+    border-radius: 3px;
+    transition: all 100ms ease-out;
+  }
+  .chart-tab:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .chart-tab.active {
+    color: var(--accent);
+    border-color: rgba(59,158,255,.3);
+    background: rgba(59,158,255,.08);
+  }
+  .chart-body {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* SVG Chart */
+  .chart-svg-wrap {
+    flex: 1;
+    padding: 16px 16px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-svg-wrap svg { flex: 1; width: 100%; }
+
+  /* Y-axis labels */
+  .y-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px 0 40px;
+    width: 36px;
+    flex-shrink: 0;
+  }
+  .y-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Side panel */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .side-panel-hd {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .side-rows {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .side-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    transition: background 100ms ease-out;
+  }
+  .side-row:hover { background: rgba(255,255,255,.02); }
+  .side-row-label { color: var(--text); }
+  .side-row-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-hi);
+  }
+  .side-row-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--border-hi);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .side-row-fill { height: 100%; border-radius: 2px; background: var(--accent); opacity: .6; }
+
+  /* ── Alert List ── */
+  .alert-section { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .alert-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .alert-hd-left { display: flex; align-items: center; gap: 10px; }
+  .alert-count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(231,76,60,.15);
+    color: var(--red);
+    font-variant-numeric: tabular-nums;
+  }
+  .alert-filter-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .filter-chip {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border: 1px solid var(--border-hi);
+    background: none;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    transition: all 100ms ease-out;
+  }
+  .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-chip.active { border-color: rgba(59,158,255,.4); background: rgba(59,158,255,.1); color: var(--accent); }
+
+  .alert-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* Scrollbar */
+  .alert-list::-webkit-scrollbar,
+  .side-rows::-webkit-scrollbar { width: 4px; }
+  .alert-list::-webkit-scrollbar-track,
+  .side-rows::-webkit-scrollbar-track { background: transparent; }
+  .alert-list::-webkit-scrollbar-thumb,
+  .side-rows::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+  /* Alert row */
+  .alert-row {
+    display: grid;
+    grid-template-columns: 20px 80px 56px 1fr auto auto;
+    align-items: center;
+    gap: 0;
+    padding: 0 16px;
+    height: 36px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    transition: background 100ms ease-out;
+    cursor: default;
+  }
+  .alert-row:hover { background: rgba(255,255,255,.025); }
+  .alert-row.crit { background: var(--red-bg); border-left: 2px solid var(--red); }
+  .alert-row.crit:hover { background: rgba(231,76,60,.12); }
+
+  .alert-sev-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    justify-self: center;
+  }
+  .alert-sev-dot.crit  { background: var(--red); box-shadow: 0 0 5px rgba(231,76,60,.6); }
+  .alert-sev-dot.warn  { background: var(--yellow); }
+  .alert-sev-dot.info  { background: var(--accent); }
+
+  .alert-ts {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    padding-right: 12px;
+  }
+  .alert-sev {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    padding-right: 12px;
+  }
+  .alert-sev.crit { color: var(--red); }
+  .alert-sev.warn { color: var(--yellow); }
+  .alert-sev.info { color: var(--accent); }
+
+  .alert-msg {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .alert-msg strong { color: var(--text-hi); font-weight: 600; }
+
+  .alert-host {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+  .alert-action button {
+    padding: 3px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border-hi);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 100ms ease-out;
+  }
+  .alert-action button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(59,158,255,.07);
+  }
+  .alert-action button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* ── State Panels ── */
+  .state-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+    padding: 24px;
+  }
+  .state-icon {
+    width: 40px; height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .35;
+  }
+  .state-title {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  .state-action {
+    padding: 4px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    border-radius: 3px;
+    border: 1px solid var(--border-hi);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all 100ms ease-out;
+  }
+  .state-action:hover { border-color: var(--accent); color: var(--accent); }
+  .state-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Skeleton loader */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--border-hi) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 2px;
+  }
+
+  /* State bar for demo toggle */
+  .demo-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .demo-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-right: 4px;
+  }
+  .demo-btn {
+    padding: 2px 9px;
+    font-family: var(--mono);
+    font-size: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border-hi);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 100ms ease-out;
+  }
+  .demo-btn:hover { border-color: var(--border-hi); color: var(--text); }
+  .demo-btn.active { border-color: rgba(59,158,255,.4); background: rgba(59,158,255,.1); color: var(--accent); }
+  .demo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Top Bar ── -->
+  <header class="topbar">
+    <span class="topbar-brand"><span>//</span> OPS-DASH</span>
+    <div class="topbar-sep"></div>
+    <span class="env-badge">PROD</span>
+    <span style="font-size:11px;color:var(--text-dim);font-family:var(--mono);">cluster: us-east-1a</span>
+    <div class="topbar-right">
+      <span class="status-dot"></span>
+      <span class="status-label">All systems nominal</span>
+      <div class="topbar-sep"></div>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- KPI Row -->
+    <section class="kpi-row">
+
+      <!-- CPU -->
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span class="kpi-status warn"></span>CPU Usage
+        </div>
+        <div class="kpi-value">73.4<span class="unit">%</span></div>
+        <div class="kpi-delta warn">▲ +8.2% vs 1h ago</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill warn" style="width:73.4%"></div>
+        </div>
+        <svg class="sparkline" width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="var(--yellow)" stroke-width="1.5" opacity=".7"
+            points="0,22 14,20 28,18 42,15 56,17 70,12 84,16 98,10 112,14 126,8 140,11 160,6"/>
+        </svg>
+      </div>
+
+      <!-- Memory -->
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span class="kpi-status ok"></span>Memory
+        </div>
+        <div class="kpi-value">11.2<span class="unit">GB</span></div>
+        <div class="kpi-delta ok">▼ −0.4GB vs 1h ago</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill ok" style="width:56%"></div>
+        </div>
+        <svg class="sparkline" width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="var(--green)" stroke-width="1.5" opacity=".7"
+            points="0,12 14,14 28,13 42,15 56,14 70,16 84,13 98,14 112,15 126,14 140,16 160,14"/>
+        </svg>
+      </div>
+
+      <!-- Request Rate -->
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span class="kpi-status ok"></span>Requests/s
+        </div>
+        <div class="kpi-value">3,847<span class="unit">/s</span></div>
+        <div class="kpi-delta ok">▲ +312/s vs 1h ago</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill ok" style="width:38%"></div>
+        </div>
+        <svg class="sparkline" width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".7"
+            points="0,20 14,18 28,16 42,19 56,14 70,12 84,10 98,13 112,9 126,11 140,8 160,7"/>
+        </svg>
+      </div>
+
+      <!-- Error Rate -->
+      <div class="kpi-card">
+        <div class="kpi-label">
+          <span class="kpi-status crit"></span>Error Rate
+        </div>
+        <div class="kpi-value">2.34<span class="unit">%</span></div>
+        <div class="kpi-delta up">▲ +1.1% vs 1h ago — threshold 1.5%</div>
+        <div class="gauge-bar">
+          <div class="gauge-fill crit" style="width:46.8%"></div>
+        </div>
+        <svg class="sparkline" width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none" aria-hidden="true">
+          <polyline fill="none" stroke="var(--red)" stroke-width="1.5" opacity=".7"
+            points="0,24 14,23 28,22 42,22 56,20 70,19 84,17 98,15 112,14 126,10 140,8 160,5"/>
+        </svg>
+      </div>
+
+    </section>
+
+    <!-- Chart + Side panel -->
+    <section class="chart-area">
+
+      <!-- Main chart -->
+      <div class="chart-pane">
+        <div class="chart-pane-hd">
+          <span class="chart-pane-title">Time Series — last 60 min</span>
+          <div class="chart-tabs">
+            <button class="chart-tab active" onclick="setTab(this,'cpu')">CPU</button>
+            <button class="chart-tab" onclick="setTab(this,'mem')">Mem</button>
+            <button class="chart-tab" onclick="setTab(this,'rps')">RPS</button>
+            <button class="chart-tab" onclick="setTab(this,'err')">Err %</button>
+          </div>
+        </div>
+        <div class="chart-body">
+          <div style="width:40px;display:flex;flex-direction:column;justify-content:space-between;padding:16px 8px 32px 12px;flex-shrink:0;">
+            <span class="y-label" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:right;">100</span>
+            <span class="y-label" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:right;">75</span>
+            <span class="y-label" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:right;">50</span>
+            <span class="y-label" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:right;">25</span>
+            <span class="y-label" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:right;">0</span>
+          </div>
+          <div class="chart-svg-wrap">
+            <svg id="main-chart" viewBox="0 0 700 180" preserveAspectRatio="none"
+                 style="width:100%;height:100%;display:block;" aria-label="CPU usage over last 60 minutes">
+              <!-- Grid lines -->
+              <line x1="0" y1="0"   x2="700" y2="0"   stroke="#1e2428" stroke-width="1"/>
+              <line x1="0" y1="45"  x2="700" y2="45"  stroke="#1e2428" stroke-width="1"/>
+              <line x1="0" y1="90"  x2="700" y2="90"  stroke="#1e2428" stroke-width="1"/>
+              <line x1="0" y1="135" x2="700" y2="135" stroke="#1e2428" stroke-width="1"/>
+              <line x1="0" y1="180" x2="700" y2="180" stroke="#1e2428" stroke-width="1"/>
+              <!-- Threshold line -->
+              <line x1="0" y1="40" x2="700" y2="40" stroke="#f5a623" stroke-width="1" stroke-dasharray="4 4" opacity=".5"/>
+              <text x="702" y="43" fill="#f5a623" font-family="JetBrains Mono,monospace" font-size="9" opacity=".7">80%</text>
+              <!-- Area fill -->
+              <defs>
+                <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stop-color="#f5a623" stop-opacity=".18"/>
+                  <stop offset="100%" stop-color="#f5a623" stop-opacity=".01"/>
+                </linearGradient>
+              </defs>
+              <polygon id="chart-area" fill="url(#cpuGrad)"
+                points="0,180 0,130 50,120 100,110 150,105 200,118 250,95 300,100 350,85 400,92 450,78 500,88 550,70 600,76 650,66 700,55 700,180"/>
+              <!-- Main line -->
+              <polyline id="chart-line" fill="none" stroke="#f5a623" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+                points="0,130 50,120 100,110 150,105 200,118 250,95 300,100 350,85 400,92 450,78 500,88 550,70 600,76 650,66 700,55"/>
+              <!-- Current value dot -->
+              <circle cx="700" cy="55" r="3.5" fill="#f5a623"/>
+            </svg>
+            <!-- X-axis labels -->
+            <div style="display:flex;justify-content:space-between;padding-top:4px;">
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">-60m</span>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">-45m</span>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">-30m</span>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">-15m</span>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side panel: top hosts -->
+      <div class="side-panel">
+        <div class="side-panel-hd">Top Hosts by CPU</div>
+        <div class="side-rows">
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">app-01.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:87%"></div></div>
+            </div>
+            <div class="side-row-val" style="color:var(--red)">87%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">app-02.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:79%"></div></div>
+            </div>
+            <div class="side-row-val" style="color:var(--yellow)">79%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">app-03.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:71%"></div></div>
+            </div>
+            <div class="side-row-val">71%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">worker-01.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:52%"></div></div>
+            </div>
+            <div class="side-row-val">52%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">worker-02.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:44%"></div></div>
+            </div>
+            <div class="side-row-val">44%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">db-primary.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:38%"></div></div>
+            </div>
+            <div class="side-row-val">38%</div>
+          </div>
+          <div class="side-row">
+            <div>
+              <div class="side-row-label">db-replica.us-east</div>
+              <div class="side-row-bar"><div class="side-row-fill" style="width:31%"></div></div>
+            </div>
+            <div class="side-row-val">31%</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Alert List -->
+    <section class="alert-section">
+      <div class="alert-hd">
+        <div class="alert-hd-left">
+          <span class="section-title">Active Alerts</span>
+          <span class="alert-count-badge" id="alert-count">4</span>
+        </div>
+        <div class="alert-filter-row">
+          <span class="demo-label">View:</span>
+          <button class="demo-btn active" onclick="showState('data')"   aria-pressed="true">Live</button>
+          <button class="demo-btn"        onclick="showState('loading')" aria-pressed="false">Loading</button>
+          <button class="demo-btn"        onclick="showState('empty')"   aria-pressed="false">Empty</button>
+          <button class="demo-btn"        onclick="showState('error')"   aria-pressed="false">Error</button>
+        </div>
+      </div>
+
+      <div class="alert-list" id="alert-list-body">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // ── Clock ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toISOString().replace('T',' ').slice(0,19) + ' UTC';
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Chart tab switch ──
+  const chartData = {
+    cpu: {
+      color: '#f5a623',
+      gradId: 'cpuGrad',
+      points: '0,130 50,120 100,110 150,105 200,118 250,95 300,100 350,85 400,92 450,78 500,88 550,70 600,76 650,66 700,55',
+      gradStop: '#f5a623',
+      threshold: 40, threshLabel: '80%',
+    },
+    mem: {
+      color: '#2ecc71',
+      gradId: 'cpuGrad',
+      points: '0,90 50,92 100,88 150,94 200,90 250,88 300,92 350,89 400,91 450,87 500,90 550,88 600,91 650,88 700,86',
+      gradStop: '#2ecc71',
+      threshold: 120, threshLabel: '',
+    },
+    rps: {
+      color: '#3b9eff',
+      gradId: 'cpuGrad',
+      points: '0,150 50,140 100,130 150,135 200,120 250,110 300,115 350,100 400,105 450,90 500,95 550,80 600,85 650,72 700,68',
+      gradStop: '#3b9eff',
+      threshold: 120, threshLabel: '',
+    },
+    err: {
+      color: '#e74c3c',
+      gradId: 'cpuGrad',
+      points: '0,165 50,160 100,158 150,155 200,152 250,148 300,145 350,140 400,135 450,128 500,120 550,110 600,100 650,88 700,78',
+      gradStop: '#e74c3c',
+      threshold: 135, threshLabel: '1.5%',
+    },
+  };
+
+  function setTab(btn, key) {
+    document.querySelectorAll('.chart-tab').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed','false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed','true');
+
+    const d = chartData[key];
+    const line = document.getElementById('chart-line');
+    const area = document.getElementById('chart-area');
+    const svg  = document.getElementById('main-chart');
+
+    line.setAttribute('stroke', d.color);
+    line.setAttribute('points', d.points);
+    area.setAttribute('points', '0,180 ' + d.points + ' 700,180');
+
+    // Update gradient color
+    svg.querySelector('defs linearGradient stop:first-child').setAttribute('stop-color', d.gradStop);
+    svg.querySelector('defs linearGradient stop:last-child').setAttribute('stop-color', d.gradStop);
+
+    // Threshold line
+    const thLine = svg.querySelectorAll('line')[4];
+    const thText = svg.querySelector('text');
+    if (d.threshLabel) {
+      thLine.setAttribute('y1', d.threshold);
+      thLine.setAttribute('y2', d.threshold);
+      thLine.setAttribute('stroke', d.color);
+      thLine.style.display = '';
+      thText.setAttribute('y', d.threshold + 3);
+      thText.setAttribute('fill', d.color);
+      thText.textContent = d.threshLabel;
+      thText.style.display = '';
+    } else {
+      thLine.style.display = 'none';
+      thText.style.display = 'none';
+    }
+
+    // Update dot
+    const lastPt = d.points.split(' ').pop().split(',');
+    const dot = svg.querySelector('circle');
+    dot.setAttribute('cx', lastPt[0]);
+    dot.setAttribute('cy', lastPt[1]);
+    dot.setAttribute('fill', d.color);
+  }
+
+  // ── Alert states ──
+  const alerts = [
+    { ts:'14:32:07', sev:'crit', msg:'<strong>Error rate exceeded threshold</strong>: 2.34% &gt; 1.50% — service: api-gateway', host:'app-01.us-east', action:'ACK' },
+    { ts:'14:29:41', sev:'crit', msg:'<strong>CPU spike detected</strong>: sustained &gt;80% for 3m47s', host:'app-01.us-east', action:'ACK' },
+    { ts:'14:17:53', sev:'warn', msg:'<strong>P95 latency elevated</strong>: 847ms (baseline 210ms) — endpoint /api/search', host:'app-02.us-east', action:'Silence' },
+    { ts:'14:03:20', sev:'info', msg:'<strong>Deployment completed</strong>: v3.14.7 rolled to 100% of fleet', host:'all', action:'Dismiss' },
+  ];
+
+  function renderAlerts() {
+    return alerts.map(a => `
+      <div class="alert-row ${a.sev}" role="row">
+        <span class="alert-sev-dot ${a.sev}" aria-hidden="true"></span>
+        <span class="alert-ts">${a.ts}</span>
+        <span class="alert-sev ${a.sev}">${a.sev.toUpperCase()}</span>
+        <span class="alert-msg">${a.msg}</span>
+        <span class="alert-host">${a.host}</span>
+        <span class="alert-action"><button aria-label="${a.action} alert">${a.action}</button></span>
+      </div>`).join('');
+  }
+
+  function renderSkeleton() {
+    return Array.from({length:4}, (_,i) => `
+      <div class="alert-row" style="cursor:default">
+        <div class="skeleton" style="width:7px;height:7px;border-radius:50%;justify-self:center"></div>
+        <div class="skeleton" style="height:11px;width:52px;border-radius:2px"></div>
+        <div class="skeleton" style="height:11px;width:36px;border-radius:2px"></div>
+        <div class="skeleton" style="height:11px;width:${220+i*40}px;border-radius:2px;max-width:100%"></div>
+        <div class="skeleton" style="height:11px;width:80px;border-radius:2px;margin:0 12px"></div>
+        <div class="skeleton" style="height:20px;width:40px;border-radius:3px"></div>
+      </div>`).join('');
+  }
+
+  function renderEmpty() {
+    return `
+      <div class="state-panel">
+        <div class="state-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" color="var(--text-dim)">
+            <circle cx="20" cy="20" r="14"/>
+            <polyline points="14,20 19,25 26,15"/>
+          </svg>
+        </div>
+        <div class="state-title">No active alerts<br><span style="font-size:11px;color:var(--text-dim)">All monitors passing — last checked ${new Date().toISOString().slice(11,19)} UTC</span></div>
+        <button class="state-action" onclick="showState('data')">← Back to live data</button>
+      </div>`;
+  }
+
+  function renderError() {
+    return `
+      <div class="state-panel">
+        <div class="state-icon" aria-hidden="true" style="opacity:1">
+          <svg viewBox="0 0 40 40" fill="none" stroke="var(--red)" stroke-width="1.5" width="40" height="40">
+            <circle cx="20" cy="20" r="14" opacity=".4"/>
+            <line x1="20" y1="13" x2="20" y2="22"/>
+            <circle cx="20" cy="27" r="1.5" fill="var(--red)" stroke="none"/>
+          </svg>
+        </div>
+        <div class="state-title" style="color:var(--text)">Alert feed unavailable<br>
+          <span style="font-size:11px;color:var(--text-dim)">Returned 503 from alerts-api.internal — retrying 2/5…</span>
+        </div>
+        <button class="state-action" onclick="showState('data')" style="border-color:rgba(231,76,60,.4);color:var(--red)">Retry now</button>
+      </div>`;
+  }
+
+  function showState(state) {
+    const body  = document.getElementById('alert-list-body');
+    const count = document.getElementById('alert-count');
+    const btns  = document.querySelectorAll('.demo-btn');
+
+    btns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+    event.target.classList.add('active');
+    event.target.setAttribute('aria-pressed','true');
+
+    switch(state) {
+      case 'data':
+        count.textContent = '4';
+        count.style.display = '';
+        body.innerHTML = renderAlerts();
+        break;
+      case 'loading':
+        count.style.display = 'none';
+        body.innerHTML = renderSkeleton();
+        break;
+      case 'empty':
+        count.textContent = '0';
+        body.innerHTML = renderEmpty();
+        break;
+      case 'error':
+        count.style.display = 'none';
+        body.innerHTML = renderError();
+        break;
+    }
+  }
+
+  // Init
+  document.getElementById('alert-list-body').innerHTML = renderAlerts();
+</script>
+</body>
+</html>
