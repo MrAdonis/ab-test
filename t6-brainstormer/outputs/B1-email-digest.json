@@ -1,0 +1,61 @@
+{
+  "task": "给 options-signals 加 email digest：Workers Cron 每日触发，查 D1 当日信号，渲染 HTML 发给订阅用户",
+  "chosen_direction": "Cloudflare Email Routing + Workers Cron",
+  "out_of_scope": [
+    "打开率 / 点击率追踪（需像素或重定向服务，过度设计）",
+    "用户自助退订 UI（< 100 用户直接 D1 手动管，不建管理界面）",
+    "多语言邮件模板（先做中文单语版，够用再扩）",
+    "邮件内容个性化（按用户持仓筛选信号，第二阶段再做）",
+    "ESP 接入（Resend/Postmark，当前规模不 justify 账单）"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "D1 新增 email_subscribers 表，存邮件地址 + 激活状态 + 创建时间",
+      "acceptance": "wrangler d1 execute 能插入一条测试记录并 SELECT 回来；D1 schema migration 文件存 migrations/",
+      "wave": 1,
+      "depends": [],
+      "notes": "表结构：id TEXT PK, email TEXT UNIQUE, active INTEGER DEFAULT 1, created_at TEXT。不做 unsubscribe_token 字段（out_of_scope），active 手动 UPDATE 管理"
+    },
+    {
+      "id": "F2",
+      "description": "Workers 新增 digest-builder.ts：从 D1 查当日信号记录，组装结构化 payload",
+      "acceptance": "wrangler dev 下调用 digestBuilder(date) 返回 { date, signals: Signal[], count: number }；D1 空数据时返回 count:0 不抛错",
+      "wave": 1,
+      "depends": [],
+      "notes": "信号查询 SQL：SELECT * FROM signals WHERE date(created_at)=? ORDER BY score DESC LIMIT 20。字段名以现有 D1 schema 为准，F2 开始前先 SELECT * FROM signals LIMIT 1 确认列名"
+    },
+    {
+      "id": "F3",
+      "description": "Workers 新增 email-template.ts：把 digest payload 渲染为 HTML 字符串",
+      "acceptance": "renderDigestEmail(payload) 返回合法 HTML，包含日期标题、信号表格（ticker/score/方向）、纯文本退订指引；本地 node 脚本输出到 /tmp/digest-preview.html 可浏览器打开验证",
+      "wave": 1,
+      "depends": [],
+      "notes": "纯字符串模板，不引入 React Email 或任何模板引擎，保持 zero dependency。退订文案写死为'回复此邮件发送 UNSUBSCRIBE'，不做自动化退订（out_of_scope）"
+    },
+    {
+      "id": "F4",
+      "description": "Workers 新增 email-sender.ts：用 send_email binding 批量发送给 active 订阅者",
+      "acceptance": "wrangler dev + CF Email binding 配置后，调用 sendDigest(html, subscribers) 能在 CF dashboard Email > Logs 看到发送记录；至少一封真实邮件送达 ljr950724@gmail.com",
+      "wave": 2,
+      "depends": ["F1", "F3"],
+      "notes": "用 CloudflareEmailMessage + send_email binding（不走 MailChannels HTTP API，走 Workers binding）。To 字段格式必须为 RFC 2822（name <addr>）。批量时串行发送（for...of），不并发——100 用户规模不需要并发，且避免速率限制。发送失败单条 console.error 不中断整批"
+    },
+    {
+      "id": "F5",
+      "description": "Workers 新增 Cron Trigger：每天 UTC 22:00（北京 06:00）触发完整 digest 流程",
+      "acceptance": "wrangler.toml 有 crons = ['0 22 * * *']；wrangler dev --test-scheduled 能触发完整流程并在日志看到 'digest sent to N subscribers'；D1 新增 digest_log 表记录每次发送的 date/count/status",
+      "wave": 3,
+      "depends": ["F2", "F4"],
+      "notes": "scheduled handler 里串联：digestBuilder → renderDigestEmail → sendDigest → 写 digest_log。count:0 时跳过发送直接写 log（status='skipped'）。不做补发逻辑（发送失败不重试，下一天正常发）"
+    },
+    {
+      "id": "F6",
+      "description": "wrangler.toml 配置 send_email binding + DNS（SPF/DKIM/MX）部署文档",
+      "acceptance": "README 或 DEPLOYMENT.md 有可执行的 4 步配置清单（CF dashboard 路径 + DNS 记录值）；新机器按文档配置后 F4 验收测试能通过",
+      "wave": 2,
+      "depends": ["F1"],
+      "notes": "send_email binding 需在 CF dashboard Email Routing 先开启并验证发件域名。wrangler.toml 加 [[send_email]] name='SEND_EMAIL'。DNS 记录（SPF TXT + DMARC TXT）值在文档里写死，不靠用户自查"
+    }
+  ]
+}

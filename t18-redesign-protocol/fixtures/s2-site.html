@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>佳膳食堂-企业团餐订餐</title>
+<style>
+  body { font-family: SimSun, serif; background: #ffffcc; margin: 0; }
+  .top { background: linear-gradient(red, orange); color: yellow; font-size: 28px; text-align: center; padding: 10px; font-weight: bold; text-shadow: 2px 2px #000; }
+  .nav { background: #006600; text-align: center; padding: 6px; }
+  .nav a { color: #fff; margin: 0 14px; font-size: 14px; }
+  .marquee { color: red; font-size: 16px; padding: 8px; }
+  table.layout { width: 960px; margin: 0 auto; }
+  .menu-item { border: 2px dashed #cc0000; padding: 8px; margin: 8px; background: #fff; }
+  .price { color: red; font-size: 22px; font-weight: bold; }
+  .order { background: #e8ffe8; border: 3px double #006600; padding: 12px; width: 400px; margin: 16px auto; }
+  .order input, .order select { width: 90%; margin: 4px 0; }
+  .btn-order { background: red; color: yellow; font-size: 18px; padding: 8px 30px; border: 2px outset #fff; }
+  .footer { text-align: center; font-size: 12px; color: #666; padding: 16px; background: #ddd; }
+</style>
+</head>
+<body>
+<div class="top">★佳膳食堂★ 企业团餐 一站式订餐服务</div>
+<div class="nav">
+  <a href="/index.html">首页</a>
+  <a href="/about.html">关于我们</a>
+  <a href="/caidan.html">每周菜单</a>
+  <a href="/dingcan.html">在线订餐</a>
+  <a href="/lianxi.html">联系方式</a>
+</div>
+<div class="marquee">【公告】本周新增低脂轻食套餐！满 30 份每份立减 2 元，欢迎企业行政联系试吃！</div>
+<table class="layout"><tr><td width="65%">
+  <h2>每周精选菜单</h2>
+  <div class="menu-item">
+    <img src="images/hongshaorou.jpg" alt="红烧肉套餐实拍" width="120">
+    <b>红烧肉套餐</b> 两荤一素一汤 <span class="price">¥22</span>
+    <p>精选五花肉，每日现烧，配时令蔬菜和例汤，米饭免费续。</p>
+  </div>
+  <div class="menu-item">
+    <img src="images/qingshi.jpg" alt="低脂轻食套餐实拍" width="120">
+    <b>低脂轻食套餐</b> 鸡胸/牛肉可选 <span class="price">¥26</span>
+    <p>少油低盐，标注热量和蛋白质克数，适合健身人群。</p>
+  </div>
+  <div class="menu-item">
+    <img src="images/sucai.jpg" alt="素食套餐实拍" width="120">
+    <b>素食套餐</b> 三素一汤 <span class="price">¥18</span>
+    <p>当季蔬菜为主，豆制品补充蛋白，清淡不寡淡。</p>
+  </div>
+  <h2>我们的服务</h2>
+  <p>成立于 2014 年，目前为园区内 37 家企业提供工作日午餐配送。中央厨房持有食品经营许可证（沪食证字 2014 第 310115 号），全程冷链/保温配送，餐损包赔。支持月结，提供增值税专用发票。</p>
+</td><td valign="top">
+  <div class="order">
+    <h3>快速订餐</h3>
+    <form action="/cgi-bin/order.cgi" method="post">
+      <input type="text" name="name" placeholder="联系人姓名">
+      <input type="text" name="phone" placeholder="手机号">
+      <input type="text" name="company" placeholder="公司名称">
+      <select name="meal_plan">
+        <option value="hongshao">红烧肉套餐 ¥22</option>
+        <option value="qingshi">低脂轻食套餐 ¥26</option>
+        <option value="sushi">素食套餐 ¥18</option>
+      </select>
+      <input type="number" name="quantity" placeholder="份数（10 份起送）">
+      <button class="btn-order" type="submit">提交订单</button>
+    </form>
+    <p style="font-size:12px;">工作日 10:30 前下单当日送达，10 份起送，园区内免配送费。</p>
+  </div>
+</td></tr></table>
+<div class="footer">
+  佳膳餐饮管理有限公司 © 2014-2026 · 订餐热线 021-5837-2210 · 沪ICP备14037856号-1 · 食品经营许可证：沪食证字 2014 第 310115 号
+</div>
+</body>
+</html>

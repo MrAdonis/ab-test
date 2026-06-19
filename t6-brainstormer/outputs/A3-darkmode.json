@@ -1,0 +1,26 @@
+{
+  "task": "修复 edonspace dark mode 下代码块背景色错误，改为深色背景",
+  "out_of_scope": [
+    "新增或更换 Shiki 主题风格（仅修复 dark mode 切换，不改现有 light theme 外观）",
+    "重构整体 dark mode 架构或 CSS variable 系统",
+    "为代码块新增复制按钮、行号、高亮行等功能"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "配置 Shiki 双主题（light: github-light，dark: github-dark），通过 CSS 变量随系统/页面 dark mode 自动切换",
+      "acceptance": "在 dark mode 下打开任意含代码块的页面，代码块背景色为深色（#0d1117 或 github-dark 对应色），前景文字为亮色；light mode 下仍为白底黑字；切换模式后代码块颜色即时更新，无需刷新",
+      "wave": 1,
+      "depends": [],
+      "notes": "技术决策：Astro shikiConfig 改为 experimentalThemes: { light: 'github-light', dark: 'github-dark' }（Astro 4+）或 themes: { light, dark } 写法；Shiki 双主题会生成带 data-theme 属性的 HTML，需在全局 CSS 加 .dark [data-theme='light'] { display: none } / .dark [data-theme='dark'] { display: block }。陷阱：Astro 旧版（<3.3）不支持 experimentalThemes，需确认项目 Astro 版本再选 API。"
+    },
+    {
+      "id": "F2",
+      "description": "在全局样式中添加 dark mode 下 Shiki 双主题的 CSS 覆盖规则，确保主题切换时渲染正确",
+      "acceptance": "运行 npm run build 无报错；src/styles/ 下对应 CSS 文件包含 .dark [data-theme] 或 @media (prefers-color-scheme: dark) 的 Shiki 切换规则",
+      "wave": 1,
+      "depends": [],
+      "notes": "若 edonspace 用 class-based dark mode（html.dark），CSS selector 写 .dark span[style] 或 .dark pre { --shiki-color-background: #0d1117 }；先查项目 tailwind.config.* 确认 darkMode 策略（'class' 还是 'media'）再写 selector，避免 selector 对不上。"
+    }
+  ]
+}

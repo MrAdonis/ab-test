@@ -1,0 +1,69 @@
+{
+  "task": "为 newsnow-publisher 新增多平台分发层，支持 X + Telegram + 小红书，统一接口，各平台格式自适应",
+  "chosen_direction": "分发适配器层（Publisher Registry）",
+  "out_of_scope": [
+    "各平台内容由 Claude 分别重写（统一走格式规则转换，不增加 Claude 调用次数）",
+    "自动发布（三平台均只存草稿/预备状态，发布时机人工决定）",
+    "消息队列 / 异步 dispatcher（5-15条/天不需要，直接同步调用）",
+    "小红书图文 AI 配图生成（沿用 X 已有的截图/原图策略，不新增生图管线）",
+    "多账号管理（每平台单一账号，session 直接存 sessions/ 目录）"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "平台适配器基类 + 注册表：定义统一接口 BasePublisher.publish(item: dict) -> PublishResult，REGISTRY 在 publishers/__init__.py 暴露",
+      "acceptance": "`python3 -c 'from publishers import REGISTRY; print(list(REGISTRY.keys()))'` 输出包含 x、telegram、xiaohongshu 三个 key，无 ImportError",
+      "wave": 1,
+      "depends": [],
+      "notes": "BasePublisher 用 ABC，publish 是 abstractmethod。item 结构不改，适配器内部转换。publishers/x.py 包装现有 post_x.save_draft_x，不重写。"
+    },
+    {
+      "id": "F2",
+      "description": "格式转换层 publishers/formatter.py：接收 item dict，输出各平台内容。X=直接用 tweet 字段；Telegram=title+tweet+url；小红书=title(≤20字)+正文+#标签",
+      "acceptance": "`python3 -m pytest tests/test_formatter.py -q` 通过，覆盖 news/podcast/builder 三种 content_type，断言各平台字段非空且满足约束",
+      "wave": 1,
+      "depends": [],
+      "notes": "小红书 title 生成：取 item['title'] 前 20 字。tags 映射表写死：news→#财经 #市场动向，builder→#独立开发 #产品，podcast→#播客 #学习。不依赖 Claude 调用。"
+    },
+    {
+      "id": "F3",
+      "description": "Telegram 适配器 publishers/telegram.py：Bot API HTTP，发送到指定 chat_id。dry-run 模式写 output/pending_telegram/ JSON，--live flag 才真实调 API",
+      "acceptance": "`python3 -m pytest tests/test_telegram.py -q` 通过：mock requests.post，断言 text 含 title 和 url；dry-run 写 output/pending_telegram/*.json 文件存在且结构正确",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "env 变量 TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID，加入 load_env.sh 注释说明。Bot API endpoint: https://api.telegram.org/bot{token}/sendMessage"
+    },
+    {
+      "id": "F4",
+      "description": "小红书适配器 publishers/xiaohongshu.py：Playwright 模拟操作存笔记草稿（creator.xiaohongshu.com），session 存 sessions/xiaohongshu.json，headless=False，随机打字延迟",
+      "acceptance": "有效 session 下 publish() 不抛异常，返回 {ok: true}；pytest mock Playwright 验证 title/body 被填入；频控：当天草稿 ≥ 5 条时打 warning",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "小红书创作者后台选择器隔离到 XHS_SELECTORS 常量块方便维护。首次需手动跑 setup_sessions.py xhs 登录。发布流程：存草稿，不点发布。"
+    },
+    {
+      "id": "F5",
+      "description": "统一分发入口 distribute.py：python3 distribute.py output/xxx.json [--platforms x,telegram,xhs] [--preview] [--live]，默认 --platforms x（保持现有行为）",
+      "acceptance": "`python3 distribute.py output/$(ls output/*.json | head -1 | xargs basename) --platforms x,telegram,xhs --preview` 终端输出三栏格式化预览，无报错；`python3 distribute.py --help` 输出包含所有 flag 说明",
+      "wave": 3,
+      "depends": ["F3", "F4"],
+      "notes": "X 平台：distribute.py → publishers/x.py → post_x.save_draft_x（保持现有行为）。错误处理：单平台失败不影响其他，exit code 0。"
+    },
+    {
+      "id": "F6",
+      "description": "MCP server 扩展：mcp_server.py 新增 distribute_draft(content, platforms, ...) 工具，支持会话内一键多平台分发",
+      "acceptance": "`python3 mcp_server.py --selftest` 通过，输出含 distribute_draft 工具描述；mock 测试验证多平台 results 字段结构正确",
+      "wave": 4,
+      "depends": ["F5"],
+      "notes": "save_x_draft 工具保持不变（向下兼容）。返回结构：{ok, results: {platform: PublishResult}}。"
+    },
+    {
+      "id": "F7",
+      "description": "CLAUDE.md 更新：补 distribute.py 用法示例、触发词表（「分发到 TG」「同步小红书」→ distribute.py 命令）、环境变量说明",
+      "acceptance": "CLAUDE.md diff 可读，新增内容与现有格式一致，触发词表格行数 +3",
+      "wave": 4,
+      "depends": ["F5"],
+      "notes": "文档先于实践：F7 在 F5 完成后立即写，不等 F6。"
+    }
+  ]
+}

@@ -14,6 +14,7 @@
 | [t2](./t2-feedback-grading/) | Code Review 反馈 4 档分级（Must/Optional/Nit/FYI） | 同 Sonnet 加/不加规则对比，3 场景盲测 | Treatment 9.0 / baseline 7.2，入 `~/.claude/rules/coding.md` |
 | [t3](./t3-yfinance-skill-cli/) | yfinance skill：每次现写 Python vs 固化成 CLI | 5 场景跑两 arm，对照 ground truth 评分 | 固化 CLI 47.5 / 内联代码 37；优势全在高频 top-op，长尾平手 |
 | [t4](./t4-cli-agent-dod/) | Agent-native 工具接口 DoD 扩充（借自 Cursor `cli-for-agent`） | 3 档复杂度 × A(4契约)/B(7契约) 盲测 | 无条件加 3 条没赢(A102/B101)；砍成 1 无条件+2 条件触发门后 dominant，入 `coding-dod.md` |
+| [t5](./t5-awesome-llm-apps/) | Awesome LLM Apps 四方向深挖（clientA架构/TOON优化/self-improving/newsnow对比）| 真实数据+真实图片实测 | **clientA采用 Sequential pipeline（15 vs 11分）**；TOON token节省47.8%但当前规模不急落地；自动化 skill 循环对客观skill有效，发现手动漏掉的问题1条；newsnow整体架构差距大仅局部参考 |
 
 每个文件夹自带 `README.md` + `REPORT.md` + 测试用例（`prompts/` 或 `scenarios.md`） + `outputs/`。
 

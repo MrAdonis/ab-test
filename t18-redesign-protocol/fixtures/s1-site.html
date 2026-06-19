@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumeo — 播客数据分析平台 | 收听数据、听众画像、增长洞察</title>
+<meta name="description" content="Lumeo 帮播客主理人看懂收听数据：单集留存曲线、听众画像、平台分发对比。免费开始，5 分钟接入 RSS。">
+<meta property="og:title" content="Lumeo — 播客数据分析平台">
+<meta property="og:description" content="单集留存曲线、听众画像、平台分发对比，5 分钟接入 RSS。">
+<meta property="og:image" content="https://lumeo.fm/og-cover.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lumeo","applicationCategory":"BusinessApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"}}
+</script>
+<style>
+  body { margin: 0; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 14px; color: #333; background: #fff; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #6d28d9; outline-offset: 2px; }
+  header { border-bottom: 1px solid #ddd; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-weight: bold; font-size: 18px; color: #6d28d9; }
+  nav a { color: #333; text-decoration: none; margin-left: 18px; font-size: 13px; }
+  .hero { text-align: center; padding: 48px 16px; background: #f7f5fb; }
+  .hero h1 { font-size: 30px; margin: 0 0 10px; }
+  .hero p { color: #666; max-width: 480px; margin: 0 auto 20px; }
+  .btn { background: #6d28d9; color: #fff; border: none; padding: 10px 22px; border-radius: 4px; font-size: 14px; cursor: pointer; }
+  .features { display: flex; gap: 16px; padding: 32px 24px; }
+  .card { border: 1px solid #ddd; border-radius: 4px; padding: 16px; flex: 1; }
+  .card h3 { font-size: 15px; margin: 0 0 8px; }
+  .card p { font-size: 13px; color: #666; margin: 0; }
+  .signup { padding: 32px 24px; background: #f0f0f0; text-align: center; }
+  .signup input { padding: 9px 12px; border: 1px solid #bbb; border-radius: 4px; margin-right: 8px; font-size: 13px; }
+  footer { padding: 20px 24px; font-size: 12px; color: #888; border-top: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">Lumeo</span>
+  <nav aria-label="主导航">
+    <a href="/features">产品功能</a>
+    <a href="/pricing">价格</a>
+    <a href="/customers">客户案例</a>
+    <a href="/blog">博客</a>
+    <a href="/login">登录</a>
+  </nav>
+</header>
+<main>
+  <section class="hero">
+    <h1>看懂你的播客数据</h1>
+    <p>单集留存曲线、听众画像、跨平台分发对比。接入 RSS 后 5 分钟出第一份报告。</p>
+    <form action="/signup" method="post">
+      <input type="email" name="work_email" placeholder="工作邮箱" aria-label="工作邮箱" required>
+      <button class="btn" type="submit">免费开始</button>
+    </form>
+  </section>
+  <section class="features" aria-label="核心功能">
+    <div class="card">
+      <img src="/img/retention.svg" alt="留存曲线示意图" width="48" height="48">
+      <h3>单集留存曲线</h3>
+      <p>看到听众在第几分钟流失，对照章节标记定位内容问题。</p>
+    </div>
+    <div class="card">
+      <img src="/img/audience.svg" alt="听众画像示意图" width="48" height="48">
+      <h3>听众画像</h3>
+      <p>地域、设备、收听时段分布，知道你的听众是谁。</p>
+    </div>
+    <div class="card">
+      <img src="/img/platforms.svg" alt="平台对比示意图" width="48" height="48">
+      <h3>平台分发对比</h3>
+      <p>小宇宙、Apple Podcasts、Spotify 同屏对比，找到增长洼地。</p>
+    </div>
+  </section>
+  <section class="signup">
+    <h2 style="font-size:20px;">已有 2,400+ 档播客在用 Lumeo</h2>
+    <form action="/signup" method="post">
+      <input type="email" name="work_email" placeholder="工作邮箱" aria-label="工作邮箱" required>
+      <input type="text" name="show_name" placeholder="节目名称" aria-label="节目名称">
+      <button class="btn" type="submit">免费开始</button>
+    </form>
+  </section>
+</main>
+<footer>
+  © 2019-2026 Lumeo · <a href="/terms">服务条款</a> · <a href="/privacy">隐私政策</a> · 沪ICP备19028374号-2
+</footer>
+</body>
+</html>

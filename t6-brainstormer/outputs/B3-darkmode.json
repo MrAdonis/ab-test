@@ -1,0 +1,27 @@
+{
+  "task": "修復 edonspace 代碼塊背景色：Shiki 未配置 theme 導致 inline style 可能覆蓋 .prose pre 深色背景",
+  "brainstorm": "skipped: bug 修復且根因已知——Shiki inline style 優先級高於 .prose pre CSS；改動僅涉及 astro.config.mjs + global.css 兩個文件，路徑清晰",
+  "out_of_scope": [
+    "全站 dark mode（light/dark 主題切換）——當前是 light-only 站，不在此次範圍",
+    "雙 theme（light 代碼塊 + dark 代碼塊）動態切換",
+    "替換語法高亮器（Prism / highlight.js）"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "在 astro.config.mjs 的 markdown.syntaxHighlight 設置 Shiki theme 為 github-dark，確保生成的 <pre> 帶深色背景 inline style",
+      "acceptance": "npm run build 無報錯；build 產物中 blog 文章代碼塊的 <pre> 帶 style='background-color:#0d1117' 或同等深色值",
+      "wave": 1,
+      "depends": [],
+      "notes": "astro.config.mjs 加 markdown: { syntaxHighlight: { theme: 'github-dark' } }；Astro 6 的 syntaxHighlight 配置鍵在 defineConfig 頂層 markdown 段，不在 integrations。github-dark 是 Shiki 內建 theme，無需額外安裝"
+    },
+    {
+      "id": "F2",
+      "description": "在 global.css .prose pre 加 CSS 兜底：用 !important 覆蓋任何殘留的淺色 inline background，確保降級保護",
+      "acceptance": "即使 F1 的 theme 未生效，瀏覽器開發者工具中 .prose pre 的 background 計算值為深色（#0d1117 或 var(--color-primary) #1d1d1f）",
+      "wave": 1,
+      "depends": [],
+      "notes": "在現有 .prose pre 規則加 background-color: #0d1117 !important（對齊 github-dark 背景色）。color: #e6edf3 !important（github-dark 默認前景色）同步更新，覆蓋舊的 #e2e8f0。.prose pre code 的 color: inherit 不需動"
+    }
+  ]
+}

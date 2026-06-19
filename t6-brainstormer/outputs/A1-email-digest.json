@@ -1,0 +1,52 @@
+{
+  "task": "为 options-signals 添加每日 email digest，汇总当日期权信号并发送给 D1 中的订阅用户",
+  "out_of_scope": [
+    "用户自助订阅/退订 UI 页面（当前直接在 D1 手动管理订阅列表）",
+    "邮件模板 A/B 测试或个性化推荐",
+    "退订链接与合规 unsubscribe 流程（List-Unsubscribe header）",
+    "历史 digest 存档与检索",
+    "多语言邮件内容"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "D1 subscribers 表：存储订阅用户 email、状态、创建时间",
+      "acceptance": "执行 `wrangler d1 execute options-signals-db --command 'SELECT COUNT(*) FROM subscribers WHERE status=\\'active\\''` 返回数字，不报错；至少插入 1 条测试记录可查到",
+      "wave": 1,
+      "depends": [],
+      "notes": "表结构：id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, status TEXT DEFAULT 'active' CHECK(status IN ('active','unsubscribed')), created_at INTEGER DEFAULT (unixepoch())。用 wrangler d1 migrations apply 管理 schema，不手动 ALTER。D1 用 TEXT 存时间戳（unixepoch 整数），不用 DATETIME 类型避免方言差异。"
+    },
+    {
+      "id": "F2",
+      "description": "digest 内容构建器：从 D1 读取当日信号，生成 HTML + 纯文本双格式 digest",
+      "acceptance": "本地跑 `node scripts/build-digest.js --date 2026-06-07 --dry-run` 输出 JSON `{html: string, text: string, signal_count: number}`，signal_count > 0 且 html 包含 `<table` 标签",
+      "wave": 1,
+      "depends": [],
+      "notes": "HTML 模板：白底，最大宽度 600px，内联 CSS（邮件客户端不支持外链样式表）。信号表格列：Ticker | Strike | Expiry | Type (Call/Put) | Premium | 时间。字体 system-ui, Arial, sans-serif，正文 14px/1.6，表头背景 #1a1a2e，文字 #ffffff，交替行 #f8f9fa/#ffffff。无数据时输出 `{html: '<p>今日无信号</p>', text: '今日无信号', signal_count: 0}` 不报错。纯文本版用 ASCII 表格，宽度 72 字符。"
+    },
+    {
+      "id": "F3",
+      "description": "Cloudflare Email Sending 集成：通过 Cloudflare Email Routing Workers binding 发送 transactional email",
+      "acceptance": "wrangler deploy 后执行 `curl -X POST https://options-signals.workers.dev/admin/test-email -H 'Authorization: Bearer $ADMIN_TOKEN' -d '{\"to\":\"test@example.com\"}'` 返回 `{success:true}`，目标邮箱在 5 分钟内收到测试邮件",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "使用 Cloudflare Email Workers send binding（`send_email` binding），不用第三方 SMTP（Resend/SendGrid）避免额外密钥和费用。wrangler.toml 加 `[[send_email]] name = 'SEND_EMAIL'`。发件人地址：`digest@options-signals.openedon.com`（需在 CF Email Routing 验证域名）。单次发送失败不 throw，记录到 D1 `email_logs` 表（id, recipient, status, error, sent_at），供排查。100 用户以内串行发送，不做并发队列。Subject 格式：`[Options Signals] Daily Digest - ${YYYY-MM-DD}`。"
+    },
+    {
+      "id": "F4",
+      "description": "Cloudflare Cron Trigger：每天 UTC 22:00（美东收盘后约 1 小时）自动触发 digest 发送",
+      "acceptance": "wrangler.toml 含 `[triggers] crons = ['0 22 * * *']`；执行 `wrangler deploy` 后在 CF Dashboard > Workers > Triggers 页面可见该 cron；手动执行 `wrangler triggers run` 不报错，D1 email_logs 表新增当次发送记录",
+      "wave": 3,
+      "depends": ["F3"],
+      "notes": "cron handler 中：1）调 build-digest 构建内容 2）查 D1 active 订阅者列表 3）逐一发送并写 email_logs 4）返回 {sent: N, failed: M}。整个 handler 超时上限 30s（CF Workers cron 默认 30s CPU time），100 用户串行发送在 10s 内可完成。如 signal_count === 0 仍发送（发'今日无信号'），不静默跳过。失败用户记 error 不中断整体循环。"
+    },
+    {
+      "id": "F5",
+      "description": "管理 API：手动触发 digest 发送、查看 email_logs、管理订阅者",
+      "acceptance": "执行以下三条 curl 均返回 2xx JSON：1) POST /admin/send-digest（立即触发发送）2) GET /admin/logs?limit=20（返回最近 20 条发送记录）3) POST /admin/subscribers（body: {email}，新增订阅者）",
+      "wave": 3,
+      "depends": ["F3"],
+      "notes": "所有 /admin/* 路由用 Authorization: Bearer 校验，token 存 CF Workers Secret（`ADMIN_TOKEN`），不硬编码。不做 UI，纯 JSON API，供 CLI/curl 操作。POST /admin/send-digest 有 idempotency 保护：同一 UTC 日期已发送则返回 `{success:false, reason:'already_sent_today'}`，不重复发。"
+    }
+  ]
+}

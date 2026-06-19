@@ -1,0 +1,1 @@
+部署 Astro 站到 Cloudflare Pages 的完整闭环：build → wrangler pages deploy → 部署后验证（curl 首页 HTTP 200 + 关键路由可达）→ 给出回滚命令。触发词：部署、上线、发布、deploy、推到 Pages、上 CF、CF Pages。硬约束：build 完或 deploy 命令退出 0 ≠ 成功——必须跑 curl 验证真实 HTTP 状态，未过验证不得声明成功。管线必须完整走完四步，任一步静默跳过视为未完成。

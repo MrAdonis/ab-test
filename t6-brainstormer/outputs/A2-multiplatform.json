@@ -1,0 +1,68 @@
+{
+  "task": "为 newsnow-publisher 构建多平台分发层，统一接口将同一条内容分发到 X / Telegram / 小红书，各平台格式自适应",
+  "out_of_scope": [
+    "微信公众号、微博、LinkedIn 等其他平台适配",
+    "内容调度/排期系统（定时发布、发布队列管理）",
+    "跨平台数据分析与效果回流（点赞数、转发数聚合）",
+    "小红书图文自动生图（图片内容由外部传入，分发层只负责上传投递）",
+    "平台账号多账号切换（每平台固定一个账号）"
+  ],
+  "features": [
+    {
+      "id": "F1",
+      "description": "统一分发接口：定义 DistributionPayload 类型，包含 content_type、raw_text、title、url、tags，提供 distribute(payload, platforms[]) 函数作为单一入口",
+      "acceptance": "TypeScript 编译通过；调用 distribute(payload, ['x']) 不报错且返回 { platform, success, post_id } 结构；缺少必填字段时抛出 ValidationError",
+      "wave": 1,
+      "depends": [],
+      "notes": "用 zod 做 payload schema 验证；platforms 参数为 ('x' | 'telegram' | 'xiaohongshu')[]；返回类型 DistributionResult[]；不引入消息队列，同步串行调用各平台 adapter"
+    },
+    {
+      "id": "F2",
+      "description": "格式转换层：按 content_type × platform 规则将 raw_text 转为各平台格式；X 限 280 字符含链接；Telegram 支持 Markdown V2，最长 4096 字符；小红书正文最长 1000 字，标签单独追加",
+      "acceptance": "单元测试覆盖 4 content_type × 3 platform = 12 组合，每组断言：字符数在平台限制内、链接存在时格式正确、tags 在小红书结果末尾以 # 分隔",
+      "wave": 1,
+      "depends": [],
+      "notes": "X 超长时按句边界截断加省略号，不硬截中文；Telegram 特殊字符需 escape；小红书 tags 从 payload.tags[] 转为 #tag 追加，不超过 10 个；格式函数纯函数无副作用，便于单测"
+    },
+    {
+      "id": "F3",
+      "description": "X adapter：复用现有 Twitter API v2 发推逻辑，封装为 XAdapter.post(formattedText): Promise<DistributionResult>",
+      "acceptance": "集成测试：用 nock 拦截 api.twitter.com/2/tweets，断言请求 body.text 等于格式转换后的文本，返回 { platform: 'x', success: true, post_id: '...' }；API 返回 429 时抛出 RateLimitError",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "直接迁移现有发推代码，不重写；Bearer token 从 process.env.X_BEARER_TOKEN 读取；媒体附件本期不支持"
+    },
+    {
+      "id": "F4",
+      "description": "Telegram adapter：调用 Bot API sendMessage，支持 parse_mode=MarkdownV2，投递到指定 chat_id",
+      "acceptance": "集成测试：nock 拦截 api.telegram.org/bot{TOKEN}/sendMessage，断言 chat_id、parse_mode、text 字段正确；消息含特殊字符时不报 400；返回 { platform: 'telegram', success: true, post_id: message_id }",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "env 变量 TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID；MarkdownV2 escape 必须在 F2 格式层完成，adapter 只负责 HTTP；日均 15 条不触发 Telegram 速率限制"
+    },
+    {
+      "id": "F5",
+      "description": "小红书 adapter：通过 Playwright headless 脚本自动化发布笔记，session cookie 持久化到本地文件",
+      "acceptance": "手动验收：运行 node adapters/xiaohongshu.js --dry-run 输出将要发布的正文+标签，无报错；运行一次真实发布后 SQLite distribution_log 表新增一条 platform=xiaohongshu、success=true 的记录",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "notes": "cookie 存 ~/.newsnow-publisher/xhs-cookies.json；首次运行提示用户手动登录后按回车保存；发布频率限制：每天不超过 10 条"
+    },
+    {
+      "id": "F6",
+      "description": "分发结果持久化：在现有 SQLite 库新增 distribution_log 表，记录每次分发的 content_id、platform、success、post_id、error_msg、created_at",
+      "acceptance": "运行 npm run migrate 后 `sqlite3 db.sqlite '.schema distribution_log'` 输出包含上述所有字段；每次 distribute() 调用后无论成功失败均写入一条记录",
+      "wave": 3,
+      "depends": ["F3", "F4", "F5"],
+      "notes": "用 better-sqlite3 同步写入，不引入 ORM；migration 文件放 migrations/；content_id 外键关联现有 posts 表；不做重试队列"
+    },
+    {
+      "id": "F7",
+      "description": "CLI 入口：扩展现有发布命令，支持 --platforms x,telegram,xiaohongshu 参数，默认仅 x（保持向后兼容）",
+      "acceptance": "`node publish.js --help` 输出包含 --platforms 说明；`node publish.js --platforms x,telegram` 只调用 X 和 Telegram adapter；省略 --platforms 时行为与改动前完全一致",
+      "wave": 3,
+      "depends": ["F6"],
+      "notes": "用 minimist 解析参数（已有依赖）；platforms 参数做白名单校验；改动不影响现有 cron 或定时脚本"
+    }
+  ]
+}
