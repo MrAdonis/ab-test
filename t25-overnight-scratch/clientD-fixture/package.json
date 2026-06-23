@@ -1,0 +1,9 @@
+{
+  "name": "clientD-decay-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "t25 AB fixture：clientD inventoryDecay 受控回归，跑 node --test 复原语义",
+  "scripts": {
+    "test": "bash scripts/run-tests.sh"
+  }
+}
