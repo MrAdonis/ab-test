@@ -8,7 +8,7 @@
 | 方向 | 他们 vs 我们 | 可直接落地？ | 优先级 |
 |------|-------------|------------|--------|
 | [t5a] TOON token 优化 | 他们：54% avg 减少；我们：无任何 context 压缩 | ✅ 极低成本，pip + 一行 | P0 立即试 |
-| [t5b] clientA 多 agent 架构 | 他们：Coordinator+Sequential；我们：flat prompt | ✅ 架构可复用，用 Claude 替换 Gemini ADK | P1 下个 session |
+| [t5b] 客户A 多 agent 架构 | 他们：Coordinator+Sequential；我们：flat prompt | ✅ 架构可复用，用 Claude 替换 Gemini ADK | P1 下个 session |
 | [t5c] Self-improving skill 自动化 | 他们：自动 Executor→Mutator；我们：手动+Sonnet评分 | ⚠️ 仅客观 skill 适用，写作/营销类不适用 | P2 选择性集成 |
 | [ref] Newsnow 管线对比 | 他们：Redis+Celery 全自动；我们：交互式 Claude Code | ❌ 架构差距太大，价值在局部思路 | 参考 |
 
@@ -65,7 +65,7 @@ stocks[2]{ticker,close,volume,pe}:
 
 ---
 
-## 二、clientA 多 Agent 架构（t5b）
+## 二、客户A 多 Agent 架构（t5b）
 
 ### 他们怎么做
 
@@ -89,7 +89,7 @@ RootCoordinator (LlmAgent)
 
 ### 我们现在怎么做
 
-`clientA/` 当前状态：商务洽谈早期，`test-photos/` 有 25 张真实损坏照片（管道/墙面/电路/窗户），`playbook.md` 有业务流程，**无任何 AI pipeline 代码**。
+`客户A/` 当前状态：商务洽谈早期，`test-photos/` 有 25 张真实损坏照片（管道/墙面/电路/窗户），`playbook.md` 有业务流程，**无任何 AI pipeline 代码**。
 
 ### 差距
 
@@ -110,7 +110,7 @@ RootCoordinator (LlmAgent)
 3. 结构化程度（能否直接转报价单，1-5）
 4. 幻觉/超范围建议（扣分项）
 
-验收条件：Arm B 总分 ≥ Arm A + 3 分（15 分满分），则设计 clientA v1 采用此架构。
+验收条件：Arm B 总分 ≥ Arm A + 3 分（15 分满分），则设计 客户A v1 采用此架构。
 
 → 见 `t5b-clientA-architecture/` 子目录
 
@@ -204,7 +204,7 @@ Executor 重跑 → 提升？保留 : 回滚
 | 优先级 | 行动 | 预期收益 | 成本 |
 |--------|------|---------|------|
 | P0 | 跑 t5a TOON 实测（`pip install toonify` + 实测 token）| token -40% → API 省钱 | 30 分钟 |
-| P1 | 跑 t5b clientA 架构对比（两 arm prompt 各 5 张）| 确认是否值得用 multi-agent 方案 | 1 session |
+| P1 | 跑 t5b 客户A 架构对比（两 arm prompt 各 5 张）| 确认是否值得用 multi-agent 方案 | 1 session |
 | P2 | 跑 t5c self-improving 循环（/diagram skill）| 量化手动 vs 自动效率 | 1 session |
 | P3 | 引入 FAISS 向量去重进 backlog.py | 减少 newsnow 话题重复率 | 2-3 小时 |
 | P3 | Earnings Call Agent 思路用到美股小报（财报电话 → analyst cards）| 增加深度内容来源 | 评估 |
