@@ -1,0 +1,1 @@
+§3 安全边界已读完。接管前必须告知（§3 HARD-GATE）：能访问的不只订单页，而是当前 profile 全部数据（所有标签页/所有 cookies 含 Stripe/Notion/飞书/X/CF session token、localStorage/sessionStorage、所有 JS 可访问 API），无"只接管一个页面"的范围限制。需确认三件事：①remote debugging 是否已开 + 配置有 --autoConnect ②当前有无不希望我碰的敏感 session ③目标页 URL。确认后用 chrome-devtools 工具接管翻页抓取整理成表，不写脚本。

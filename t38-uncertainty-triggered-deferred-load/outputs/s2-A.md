@@ -1,0 +1,1 @@
+关键词核查：无 Lighthouse/CWV/SPA、无 write content for X/blog（是发 Twitter 不是写内容框架）、无 make image。三 reference 均不命中，全部不加载。writing.md 已常驻。打磨给两版（A 原味：今天把老脚本重写了一版，顺手删了 300 行死代码。爽。 / B 多质感）。倾向 A，B 后半句有凑嫌疑。你选哪个？确认后发推。
