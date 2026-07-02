@@ -1,0 +1,1 @@
+以前想让 AI agent 操控 Blender、FreeCAD 这类专业软件，只能靠人工写脚本对接，换一个软件全部重新来过，而且大部分工具压根没有给 AI 用的接口。港大 HKUDS 开源的 CLI-Anything 直接把任意 GUI 软件或 API 转成 AI 能调用的命令行工具：接口、测试用例、文档全自动生成，天然兼容 Claude Code 和 OpenClaw，调用后返回结构化 JSON，不用再靠截图猜状态。它的 demo 里 AI 用 Blender 和 FreeCAD 协作设计出一辆火星车，还能自动剪出带字幕的视频。等于给每个软件配了一层说明书加接口，以后想让 AI 用新工具，不用再手搓适配代码了。
