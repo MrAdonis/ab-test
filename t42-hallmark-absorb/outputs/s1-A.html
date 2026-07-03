@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>定价 — 账雀 Ledgerbird</title>
+<meta name="description" content="账雀 Ledgerbird 定价：免费版、独立版 ¥29/月、工作室版 ¥79/月，年付 85 折。">
+<style>
+  :root {
+    --ink: #1c2321;
+    --paper: #f7f5f0;
+    --moss: #3e5c50;
+    --moss-deep: #2c443a;
+    --amber: #c98a2d;
+    --line: #dcd7cc;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Source Han Sans SC", "PingFang SC", "Noto Sans SC", -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+  :focus-visible {
+    outline: 2px solid var(--moss);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(247,245,240,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: .02em; }
+  .logo em { font-style: normal; color: var(--moss); }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; }
+  .nav-links a { text-decoration: none; opacity: .75; padding: 4px 0; }
+  .nav-links a:hover { opacity: 1; }
+  .nav-links a.active { opacity: 1; font-weight: 600; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 22px; border-radius: var(--radius);
+    background: var(--moss); color: #fff; text-decoration: none; font-size: 14px;
+    border: 1px solid var(--moss); cursor: pointer; transition: background .15s ease-out, transform .1s ease-out;
+  }
+  .btn:hover { background: var(--moss-deep); border-color: var(--moss-deep); }
+  .btn:active { transform: translateY(1px); }
+  .btn-ghost { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
+  .btn-ghost:hover { background: rgba(62,92,80,.08); }
+  .btn-dark { background: var(--ink); border-color: var(--ink); }
+  .btn-dark:hover { background: #000; border-color: #000; }
+  .btn-block { width: 100%; }
+  .nav .btn { min-height: 40px; padding: 0 20px; }
+
+  /* ---------- page hero ---------- */
+  .page-hero { text-align: center; padding: 72px 0 40px; }
+  .page-hero h1 { font-size: 40px; line-height: 1.3; letter-spacing: .01em; }
+  .page-hero h1 span { color: var(--moss); }
+  .page-hero p { max-width: 32em; margin: 18px auto 0; font-size: 16px; opacity: .8; }
+
+  /* ---------- billing toggle ---------- */
+  .billing-toggle-wrap { display: flex; justify-content: center; padding: 32px 0 8px; }
+  .billing-toggle {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px;
+  }
+  .toggle-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 40px; padding: 0 18px; border-radius: 999px; font-size: 14px;
+    color: var(--ink); opacity: .6; transition: background .15s ease-out, opacity .15s ease-out;
+  }
+  .toggle-btn.is-active { background: var(--moss); color: #fff; opacity: 1; }
+  .toggle-btn:hover:not(.is-active) { opacity: .85; }
+  .save-tag {
+    font-family: "SF Mono", ui-monospace, monospace; font-size: 11px;
+    background: rgba(201,138,45,.15); color: var(--amber); border-radius: 999px;
+    padding: 2px 8px; letter-spacing: .02em;
+  }
+  .toggle-btn.is-active .save-tag { background: rgba(255,255,255,.2); color: #fff; }
+
+  /* ---------- pricing panels ---------- */
+  .pricing { padding: 40px 0 72px; }
+  .pricing-grid {
+    display: grid; grid-template-columns: 1fr 1.08fr 1fr; gap: 20px; align-items: start;
+  }
+  .plan {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 32px 28px; display: flex; flex-direction: column; height: 100%;
+  }
+  .plan.featured {
+    border-color: var(--moss); transform: translateY(-12px);
+    box-shadow: 0 20px 40px -20px rgba(44,68,58,.35);
+  }
+  .plan-badge {
+    display: inline-block; align-self: flex-start; font-size: 12px; color: var(--amber);
+    border: 1px solid rgba(201,138,45,.4); border-radius: 999px; padding: 3px 12px;
+    margin-bottom: 16px;
+  }
+  .plan-name { font-size: 16px; font-weight: 600; }
+  .plan-desc { font-size: 13px; opacity: .65; margin-top: 4px; }
+  .plan-price { margin: 24px 0 4px; display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+  .plan-price .num { font-size: 40px; font-weight: 700; letter-spacing: -.01em; }
+  .plan-price .unit { font-size: 14px; opacity: .6; }
+  .plan-annual-note { font-size: 12px; opacity: .6; min-height: 18px; font-variant-numeric: tabular-nums; }
+  .plan[data-billing-scope] .price-annual { display: none; }
+  .plan.show-annual .price-monthly { display: none; }
+  .plan.show-annual .price-annual { display: flex; }
+  .plan .price-annual { display: none; }
+
+  .plan-cta { margin: 24px 0 28px; }
+  .plan-features { list-style: none; font-size: 14px; }
+  .plan-features li {
+    display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .plan-features li:first-child { border-top: none; padding-top: 0; }
+  .plan-features .check { color: var(--moss); flex-shrink: 0; font-weight: 700; }
+  .plan.featured .plan-features .check { color: var(--moss-deep); }
+  .plan-includes { font-size: 12px; opacity: .55; margin-bottom: 12px; }
+
+  .pricing-note { text-align: center; font-size: 13px; opacity: .55; margin-top: 32px; }
+
+  /* ---------- faq ---------- */
+  .faq { padding: 24px 0 80px; }
+  .faq .wrap { max-width: 760px; }
+  .faq h2 { text-align: center; font-size: 26px; margin-bottom: 8px; }
+  .faq-intro { text-align: center; font-size: 14px; opacity: .65; margin-bottom: 36px; }
+  .faq-list { border-top: 1px solid var(--line); }
+  .faq-item { border-bottom: 1px solid var(--line); }
+  .faq-q {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; text-align: left; padding: 20px 4px; min-height: 44px; font-size: 15px; font-weight: 500;
+  }
+  .faq-icon { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+  .faq-icon::before, .faq-icon::after {
+    content: ""; position: absolute; background: var(--moss); border-radius: 1px;
+    transition: transform .2s ease-out, opacity .2s ease-out;
+  }
+  .faq-icon::before { top: 50%; left: 0; width: 16px; height: 2px; transform: translateY(-50%); }
+  .faq-icon::after { top: 0; left: 50%; width: 2px; height: 16px; transform: translateX(-50%); }
+  .faq-item.open .faq-icon::after { opacity: 0; transform: translateX(-50%) rotate(90deg); }
+  .faq-a {
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease-out;
+  }
+  .faq-item.open .faq-a { grid-template-rows: 1fr; }
+  .faq-a-inner { overflow: hidden; }
+  .faq-a p { font-size: 14px; opacity: .78; padding: 0 4px 20px; max-width: 62ch; }
+
+  /* ---------- cta band ---------- */
+  .cta-band { background: var(--moss-deep); color: #f2efe7; text-align: center; padding: 72px 0; }
+  .cta-band h2 { font-size: 28px; margin-bottom: 12px; }
+  .cta-band p { opacity: .75; margin-bottom: 28px; font-size: 15px; }
+  .cta-band .btn { background: #fff; color: var(--moss-deep); border-color: #fff; }
+  .cta-band .btn:hover { background: #f2efe7; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0; font-size: 13px; opacity: .6; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .page-hero h1, .page-hero p { animation: fade-up .5s ease-out backwards; }
+  .page-hero p { animation-delay: .08s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: .001s !important; transition-duration: .001s !important; }
+  }
+
+  @media (max-width: 860px) {
+    .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+    .plan.featured { transform: none; }
+    .page-hero h1 { font-size: 30px; }
+  }
+  @media (max-width: 560px) {
+    .nav-links { display: none; }
+    footer .wrap { flex-direction: column; }
+    .cta-band { padding: 56px 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="logo">账雀 <em>Ledgerbird</em></div>
+    <nav class="nav-links">
+      <a href="#">功能</a><a href="#" class="active">定价</a><a href="#">更新日志</a><a href="#">文档</a>
+    </nav>
+    <a class="btn" href="#">免费开始</a>
+  </div>
+</header>
+
+<section class="page-hero wrap">
+  <h1>选一档，把<span>记账这件事</span>关掉</h1>
+  <p>从免费开始，渠道多起来再升级——所有价格已含税，随时可以降级或取消。</p>
+</section>
+
+<div class="billing-toggle-wrap">
+  <div class="billing-toggle" role="group" aria-label="计费周期">
+    <button class="toggle-btn is-active" id="billing-monthly" aria-pressed="true">月付</button>
+    <button class="toggle-btn" id="billing-annual" aria-pressed="false">年付 <span class="save-tag">85 折</span></button>
+  </div>
+</div>
+
+<section class="pricing wrap" id="pricing">
+  <div class="pricing-grid">
+
+    <div class="plan" data-plan="free">
+      <div class="plan-name">免费版</div>
+      <div class="plan-desc">刚起步，先看看账雀顺不顺手</div>
+      <div class="plan-price">
+        <span class="num">¥0</span>
+        <span class="unit">永久</span>
+      </div>
+      <div class="plan-annual-note">&nbsp;</div>
+      <div class="plan-cta"><a class="btn btn-ghost btn-block" href="#">免费开始使用</a></div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span><span>1 个渠道接入</span></li>
+        <li><span class="check">✓</span><span>手工记账 + 分类标签</span></li>
+        <li><span class="check">✓</span><span>单渠道流水导出（CSV）</span></li>
+        <li><span class="check">✓</span><span>社区文档支持</span></li>
+      </ul>
+    </div>
+
+    <div class="plan featured" data-plan="individual">
+      <div class="plan-badge">多数独立开发者的选择</div>
+      <div class="plan-name">独立版</div>
+      <div class="plan-desc">渠道超过一个，交给自动同步</div>
+      <div class="plan-price price-monthly">
+        <span class="num">¥29</span>
+        <span class="unit">/ 月</span>
+      </div>
+      <div class="plan-price price-annual">
+        <span class="num">¥296</span>
+        <span class="unit">/ 年</span>
+      </div>
+      <div class="plan-annual-note">
+        <span class="price-monthly">&nbsp;</span>
+        <span class="price-annual">约 ¥24.7/月，比月付省 ¥52</span>
+      </div>
+      <div class="plan-cta"><a class="btn btn-block" href="#">开始独立版</a></div>
+      <div class="plan-includes">包含免费版全部功能，另加：</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span><span>5 个渠道自动同步（Stripe / App Store / Gumroad / 银行卡等）</span></li>
+        <li><span class="check">✓</span><span>交易每小时自动入账</span></li>
+        <li><span class="check">✓</span><span>按项目 / 客户 / 订阅周期自动归类</span></li>
+        <li><span class="check">✓</span><span>季度报税导出，含渠道手续费拆分</span></li>
+        <li><span class="check">✓</span><span>邮件支持，24 小时内回复</span></li>
+      </ul>
+    </div>
+
+    <div class="plan" data-plan="studio">
+      <div class="plan-name">工作室版</div>
+      <div class="plan-desc">多主体、带会计一起对账</div>
+      <div class="plan-price price-monthly">
+        <span class="num">¥79</span>
+        <span class="unit">/ 月</span>
+      </div>
+      <div class="plan-price price-annual">
+        <span class="num">¥806</span>
+        <span class="unit">/ 年</span>
+      </div>
+      <div class="plan-annual-note">
+        <span class="price-monthly">&nbsp;</span>
+        <span class="price-annual">约 ¥67.2/月，比月付省 ¥142</span>
+      </div>
+      <div class="plan-cta"><a class="btn btn-dark btn-block" href="#">开始工作室版</a></div>
+      <div class="plan-includes">包含独立版全部功能，另加：</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span><span>无限渠道接入</span></li>
+        <li><span class="check">✓</span><span>多主体账套，最多 5 个公司 / 工作室实体</span></li>
+        <li><span class="check">✓</span><span>3 个会计协作席位，可加购</span></li>
+        <li><span class="check">✓</span><span>报税导出支持自定义字段</span></li>
+        <li><span class="check">✓</span><span>优先支持，4 小时内回复</span></li>
+      </ul>
+    </div>
+
+  </div>
+  <p class="pricing-note">所有付费版含 14 天无理由退款 · 数据可随时导出，取消不锁账</p>
+</section>
+
+<section class="faq wrap">
+  <h2>常见问题</h2>
+  <p class="faq-intro">没找到答案？发邮件到 hello@ledgerbird.app</p>
+  <div class="faq-list">
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-1" id="faq-q-1">
+        <span>免费版和独立版最大的区别是什么？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-1" role="region" aria-labelledby="faq-q-1">
+        <div class="faq-a-inner">
+          <p>免费版只接 1 个渠道、纯手工记账；独立版接 5 个渠道自动同步，交易每小时自动入账，还能导出报税用的季度汇总。多数从免费版升级的用户，触发点是渠道数量不够用。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-2" id="faq-q-2">
+        <span>"渠道"具体指什么，支持哪些平台？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-2" role="region" aria-labelledby="faq-q-2">
+        <div class="faq-a-inner">
+          <p>渠道是账雀能自动拉取交易记录的收款来源，目前支持 Stripe、App Store Connect、Google Play、Gumroad、Paddle 和主流银行卡账单邮箱同步，新渠道持续在加。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-3" id="faq-q-3">
+        <span>年付和月付可以中途切换吗？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-3" role="region" aria-labelledby="faq-q-3">
+        <div class="faq-a-inner">
+          <p>可以。月付用户随时能切到年付，按剩余天数折算差价；年付用户到期前可选择降级，已付费用不退，但会保留到当期结束。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-4" id="faq-q-4">
+        <span>我的支付账户信息存在哪，安全吗？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-4" role="region" aria-labelledby="faq-q-4">
+        <div class="faq-a-inner">
+          <p>账雀只读交易金额和渠道元数据，不存储你的银行卡号或第三方平台密码——渠道接入走各平台官方 OAuth 授权，账雀拿到的是只读 API token，随时可以在渠道设置里撤销。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-5" id="faq-q-5">
+        <span>会计协作席位是什么？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-5" role="region" aria-labelledby="faq-q-5">
+        <div class="faq-a-inner">
+          <p>给你的会计或财务顾问开一个只读或可批注的账号，不用共享你的登录密码。工作室版自带 3 个席位，超出可按 ¥19/席位/月加购。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" aria-expanded="false" aria-controls="faq-a-6" id="faq-q-6">
+        <span>取消订阅后数据会保留多久？</span>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a" id="faq-a-6" role="region" aria-labelledby="faq-q-6">
+        <div class="faq-a-inner">
+          <p>取消后账户自动降级为免费版，历史流水和分类标签保留 90 天，90 天内重新订阅可完整恢复；90 天后仅保留近 12 个月的汇总数据。</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="cta-band wrap">
+  <h2>把对账的那一天拿回来</h2>
+  <p>五分钟接好第一个渠道，本月的账已经在表里了。</p>
+  <a class="btn" href="#">免费开始</a>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 账雀 Ledgerbird</span>
+    <span>隐私 · 条款 · status.ledgerbird.app</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // billing toggle
+  var monthlyBtn = document.getElementById('billing-monthly');
+  var annualBtn = document.getElementById('billing-annual');
+  var plans = document.querySelectorAll('.plan');
+
+  function setBilling(mode) {
+    var isAnnual = mode === 'annual';
+    monthlyBtn.classList.toggle('is-active', !isAnnual);
+    annualBtn.classList.toggle('is-active', isAnnual);
+    monthlyBtn.setAttribute('aria-pressed', String(!isAnnual));
+    annualBtn.setAttribute('aria-pressed', String(isAnnual));
+    plans.forEach(function (plan) {
+      plan.classList.toggle('show-annual', isAnnual);
+    });
+  }
+
+  monthlyBtn.addEventListener('click', function () { setBilling('monthly'); });
+  annualBtn.addEventListener('click', function () { setBilling('annual'); });
+
+  // faq accordion
+  document.querySelectorAll('.faq-q').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var item = btn.closest('.faq-item');
+      var isOpen = item.classList.contains('open');
+      item.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+    });
+  });
+})();
+</script>
+</body>
+</html>

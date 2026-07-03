@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emberline Coffee Roasters — Direct-Fire Small-Batch Coffee, Portland OR</title>
+<meta name="description" content="Emberline Coffee Roasters hand-roasts small batches over open gas flame in Southeast Portland. No profiling software, no drum automation — just a probe thermometer and twelve years of listening for first crack. Order beans or join the quarterly subscription.">
+<meta name="theme-color" content="#15120d">
+<style>
+  :root{
+    --bg:#15120d;
+    --bg-alt:#1c1710;
+    --bg-alt2:#241d13;
+    --paper:#f3efe6;
+    --paper-alt:#eae3d3;
+    --paper-ink:#1c1710;
+    --paper-mute:#6b5f4f;
+    --ink:#f3efe6;
+    --ink-mute:#a89a86;
+    --ink-mute2:#7d7263;
+    --ember:#cf5a2c;
+    --ember-text:#e88354;
+    --ember-on-paper:#a8431c;
+    --line:rgba(243,239,230,0.14);
+    --line-strong:rgba(243,239,230,0.26);
+    --line-paper:rgba(28,23,16,0.16);
+    --line-paper-strong:rgba(28,23,16,0.30);
+
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+
+    --fs-0: 0.6875rem;
+    --fs-1: 0.8125rem;
+    --fs-2: 0.9375rem;
+    --fs-3: 1.0625rem;
+    --fs-4: 1.375rem;
+    --fs-5: 1.9rem;
+    --fs-6: clamp(2.1rem, 3.4vw + 1rem, 3.6rem);
+    --fs-7: clamp(2.6rem, 5.5vw + 1rem, 5.2rem);
+
+    --sp-1: 0.25rem;
+    --sp-2: 0.5rem;
+    --sp-3: 0.75rem;
+    --sp-4: 1rem;
+    --sp-5: 1.5rem;
+    --sp-6: 2rem;
+    --sp-7: 3rem;
+    --sp-8: 4rem;
+    --sp-9: 6rem;
+    --sp-10: 8rem;
+
+    --z-nav: 100;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:var(--fs-2);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+
+  /* fixed grain overlay — texture, not decoration on scroll content */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    opacity:0.05;
+    mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  h1,h2,h3{ font-family:var(--font-display); font-weight:700; margin:0; text-wrap:balance; }
+  p{ margin:0; text-wrap:pretty; }
+  a{ color:inherit; }
+  img,svg{ max-width:100%; display:block; }
+
+  .mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  .label{
+    font-family:var(--font-mono);
+    font-size:var(--fs-0);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-mute);
+  }
+  .label--paper{ color:var(--paper-mute); }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding-inline:clamp(1.25rem, 4vw, 3rem);
+  }
+
+  /* ---------- reveal / motion ---------- */
+  .reveal{
+    opacity:0;
+    transform:translateY(18px);
+    transition:opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+  }
+  .reveal.is-visible{ opacity:1; transform:translateY(0); }
+  .reveal-stagger > *{ transition-delay:calc(var(--i, 0) * 90ms); }
+
+  .draw-line{
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform 0.9s var(--ease-out);
+  }
+  .draw-line.is-visible{ transform:scaleX(1); }
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:0.001ms !important;
+      transition-duration:0.001ms !important;
+      scroll-behavior:auto !important;
+    }
+    .reveal{ opacity:1 !important; transform:none !important; }
+    .draw-line{ transform:scaleX(1) !important; }
+    #roast-path{ stroke-dashoffset:0 !important; }
+  }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:var(--z-nav);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0.9rem clamp(1.25rem, 4vw, 3rem);
+    background:rgba(21,18,13,0.86);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .wordmark{
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  .wordmark span{ color:var(--ember-text); }
+  .topbar-tag{
+    font-family:var(--font-mono);
+    font-size:var(--fs-0);
+    letter-spacing:0.1em;
+    color:var(--ink-mute);
+    text-transform:uppercase;
+    display:none;
+  }
+  @media (min-width:640px){ .topbar-tag{ display:inline; } }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.5rem;
+    min-height:44px;
+    padding:0.75rem 1.4rem;
+    border-radius:2px;
+    font-family:var(--font-body);
+    font-size:var(--fs-2);
+    font-weight:600;
+    text-decoration:none;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:transform 0.15s var(--ease-out), background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn:focus-visible{ outline:2px solid var(--ember-text); outline-offset:3px; }
+
+  .btn--primary{ background:var(--ember); color:#100f0d; border-color:var(--ember); }
+  .btn--primary:hover{ background:var(--ember-text); border-color:var(--ember-text); }
+
+  .btn--ghost{ background:transparent; color:var(--ink); border-color:var(--line-strong); }
+  .btn--ghost:hover{ border-color:var(--ember-text); color:var(--ember-text); }
+
+  .btn--paper{ background:var(--paper-ink); color:var(--paper); border-color:var(--paper-ink); }
+  .btn--paper:hover{ background:var(--ember-on-paper); border-color:var(--ember-on-paper); color:var(--paper); }
+
+  .btn--nav{ padding:0.55rem 1.1rem; font-size:var(--fs-1); min-height:40px; }
+
+  /* ---------- hero ---------- */
+  .hero{
+    min-height:100dvh;
+    display:flex;
+    align-items:center;
+    padding-block:var(--sp-9) var(--sp-8);
+    position:relative;
+    z-index:2;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--sp-8);
+    align-items:center;
+    width:100%;
+  }
+  @media (min-width:960px){
+    .hero-grid{ grid-template-columns:1.12fr 1fr; gap:clamp(2rem,5vw,4.5rem); }
+  }
+  .hero-copy h1{
+    font-size:var(--fs-7);
+    line-height:1.04;
+    letter-spacing:-0.01em;
+  }
+  .hero-copy .sub{
+    margin-top:var(--sp-5);
+    max-width:34ch;
+    font-size:var(--fs-4);
+    line-height:1.5;
+    color:var(--ink-mute);
+  }
+  .hero-cta{
+    margin-top:var(--sp-7);
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--sp-4);
+  }
+  .hero-chart{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    padding:var(--sp-5);
+    border-radius:2px;
+  }
+  .hero-chart-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:var(--sp-3);
+  }
+  .hero-chart-head .label{ margin:0; }
+  #roast-path{
+    fill:none;
+    stroke:var(--ember-text);
+    stroke-width:2.5;
+    stroke-linecap:round;
+  }
+  .chart-grid line{ stroke:var(--line); stroke-width:1; }
+  .chart-axis-text{ font-family:var(--font-mono); font-size:9px; fill:var(--ink-mute2); }
+  .chart-dot{ fill:var(--ember-text); }
+  .chart-dot-halo{ fill:var(--ember); opacity:0.22; }
+  .chart-marker-text{ font-family:var(--font-mono); font-size:10px; fill:var(--ink); }
+  .chart-marker-sub{ font-family:var(--font-mono); font-size:9px; fill:var(--ink-mute); }
+  .chart-drop{ stroke:var(--line); stroke-dasharray:2 4; }
+
+  /* ---------- section shell ---------- */
+  section{ position:relative; z-index:2; }
+  .section{ padding-block:var(--sp-9); }
+  .section--tight{ padding-block:var(--sp-8); }
+  .section-head{ margin-bottom:var(--sp-7); }
+  .section-head h2{ font-size:var(--fs-6); margin-top:var(--sp-2); max-width:22ch; }
+  .section-alt{ background:var(--bg-alt); }
+
+  /* ---------- philosophy ---------- */
+  .philosophy-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--sp-7);
+  }
+  @media (min-width:860px){
+    .philosophy-grid{ grid-template-columns:1.5fr 1fr; }
+  }
+  .pull-quote{
+    font-family:var(--font-display);
+    font-style:italic;
+    font-size:var(--fs-5);
+    line-height:1.42;
+    color:var(--ink);
+  }
+  .pull-quote + p{
+    margin-top:var(--sp-5);
+    max-width:56ch;
+    color:var(--ink-mute);
+    font-size:var(--fs-3);
+  }
+  .spec-strip{ border-top:1px solid var(--line); }
+  .spec-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:var(--sp-4);
+    padding-block:var(--sp-4);
+    border-bottom:1px solid var(--line);
+    align-items:baseline;
+  }
+  .spec-row dt{ font-family:var(--font-mono); font-size:var(--fs-0); letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-mute); margin:0; }
+  .spec-row dd{ font-family:var(--font-mono); font-size:var(--fs-2); margin:0; text-align:right; }
+
+  /* ---------- bean lineup ---------- */
+  .beans-list{ border-top:1px solid var(--line); }
+  .bean-row{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:var(--sp-5);
+    align-items:start;
+    padding-block:var(--sp-6);
+    border-bottom:1px solid var(--line);
+    transition:background-color 0.2s var(--ease-out);
+  }
+  .bean-row:hover{ background:var(--bg-alt2); }
+  .bean-index{
+    font-family:var(--font-mono);
+    font-size:var(--fs-3);
+    color:var(--ink-mute2);
+    padding-top:0.15em;
+    min-width:2.2ch;
+  }
+  .bean-row--feature{ padding-block:var(--sp-7); }
+  .bean-row--feature .bean-index{ font-size:var(--fs-5); color:var(--ember-text); }
+  .bean-name{ font-family:var(--font-display); font-size:var(--fs-4); margin:0 0 0.35rem; }
+  .bean-row--feature .bean-name{ font-size:var(--fs-5); }
+  .bean-origin{ font-size:var(--fs-1); color:var(--ink-mute); margin-bottom:var(--sp-3); }
+  .bean-notes{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.4rem 0.6rem;
+    list-style:none;
+    margin:0 0 var(--sp-3);
+    padding:0;
+    font-family:var(--font-mono);
+    font-size:var(--fs-0);
+    letter-spacing:0.05em;
+    color:var(--ember-text);
+  }
+  .bean-notes li{ border:1px solid rgba(232,131,84,0.35); padding:0.2rem 0.5rem; border-radius:2px; }
+  .bean-meta{ font-family:var(--font-mono); font-size:var(--fs-0); color:var(--ink-mute2); }
+  .bean-price{
+    font-family:var(--font-mono);
+    font-size:var(--fs-4);
+    text-align:right;
+    white-space:nowrap;
+    padding-top:0.15em;
+  }
+  .bean-price small{ display:block; font-size:var(--fs-0); color:var(--ink-mute); font-weight:400; margin-top:0.3rem; }
+
+  /* ---------- process ---------- */
+  .process-line{
+    position:relative;
+    height:1px;
+    background:var(--line);
+    margin-bottom:var(--sp-8);
+  }
+  .process-line-fill{
+    position:absolute;
+    inset:0;
+    background:var(--ember);
+    transform-origin:left center;
+  }
+  .process-steps{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--sp-7);
+  }
+  @media (min-width:760px){
+    .process-steps{ grid-template-columns:repeat(4,1fr); gap:var(--sp-5); }
+  }
+  .process-step{ border-left:2px solid var(--line-strong); padding-left:var(--sp-4); }
+  .process-step .num{ font-family:var(--font-mono); color:var(--ember-text); font-size:var(--fs-1); }
+  .process-step h3{ font-size:var(--fs-4); margin:var(--sp-2) 0 var(--sp-2); }
+  .process-step .temp{ font-family:var(--font-mono); font-size:var(--fs-2); color:var(--ink); margin-bottom:var(--sp-3); }
+  .process-step p{ color:var(--ink-mute); font-size:var(--fs-1); }
+
+  /* ---------- subscription (paper inverse) ---------- */
+  .section--paper{
+    background:var(--paper);
+    color:var(--paper-ink);
+  }
+  .section--paper .label{ color:var(--paper-mute); }
+  .section--paper .section-head h2{ color:var(--paper-ink); }
+  .ticket{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--sp-7);
+    border:1px solid var(--line-paper-strong);
+    padding:var(--sp-7);
+    background:var(--paper-alt);
+    position:relative;
+  }
+  @media (min-width:820px){
+    .ticket{ grid-template-columns:auto 1fr; align-items:center; }
+    .ticket-price{ border-right:1px dashed var(--line-paper-strong); padding-right:var(--sp-7); }
+  }
+  .ticket-price .amount{
+    font-family:var(--font-mono);
+    font-size:clamp(3rem, 6vw, 4.6rem);
+    line-height:0.95;
+    color:var(--ember-on-paper);
+  }
+  .ticket-price .amount sup{ font-size:0.4em; top:-0.6em; }
+  .ticket-price .cadence{ font-family:var(--font-mono); font-size:var(--fs-1); color:var(--paper-mute); margin-top:0.4rem; }
+  .ticket-specs dt{ font-family:var(--font-mono); font-size:var(--fs-0); letter-spacing:0.08em; text-transform:uppercase; color:var(--paper-mute); }
+  .ticket-specs dd{ font-family:var(--font-body); font-size:var(--fs-3); margin:0.15rem 0 0; }
+  .ticket-specs > div{ padding-block:var(--sp-3); border-top:1px solid var(--line-paper); }
+  .ticket-specs > div:first-child{ border-top:none; padding-top:0; }
+  .ticket-cta{ margin-top:var(--sp-6); }
+  .ticket-note{ margin-top:var(--sp-3); font-family:var(--font-mono); font-size:var(--fs-0); color:var(--paper-mute); }
+
+  /* ---------- studio ---------- */
+  .studio{ position:relative; overflow:hidden; }
+  .studio-watermark{
+    position:absolute;
+    right:clamp(-2rem,-2vw,0rem);
+    bottom:-0.3em;
+    font-family:var(--font-display);
+    font-style:italic;
+    font-size:clamp(4rem, 14vw, 11rem);
+    color:var(--ink-mute2);
+    opacity:0.14;
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:0;
+  }
+  .studio-grid{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--sp-7);
+  }
+  @media (min-width:760px){
+    .studio-grid{ grid-template-columns:1fr 1fr; }
+  }
+  .studio-col dl{ margin:0; }
+  .studio-col > div{ padding-block:var(--sp-4); border-top:1px solid var(--line); }
+  .studio-col > div:first-child{ border-top:none; padding-top:0; }
+  .studio-col dt{ font-family:var(--font-mono); font-size:var(--fs-0); letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-mute); }
+  .studio-col dd{ margin:0.3rem 0 0; font-size:var(--fs-3); max-width:38ch; }
+
+  /* ---------- footer ---------- */
+  footer{
+    border-top:1px solid var(--line);
+    padding-block:var(--sp-7);
+  }
+  .footer-grid{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:center;
+    gap:var(--sp-5);
+  }
+  .footer-nav{ display:flex; gap:var(--sp-6); flex-wrap:wrap; list-style:none; padding:0; margin:0; }
+  .footer-nav a{ text-decoration:none; font-size:var(--fs-1); color:var(--ink-mute); transition:color 0.15s var(--ease-out); }
+  .footer-nav a:hover{ color:var(--ember-text); }
+  .footer-nav a:focus-visible{ outline:2px solid var(--ember-text); outline-offset:3px; }
+  .footer-fine{ font-family:var(--font-mono); font-size:var(--fs-0); color:var(--ink-mute2); }
+
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--ember-text); outline-offset:3px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wordmark">EMBER<span>LINE</span></div>
+  <span class="topbar-tag">Direct-fire roasting · Portland, OR</span>
+  <a class="btn btn--nav btn--ghost" href="#lineup">Shop Beans</a>
+</header>
+
+<main>
+
+  <section class="hero wrap">
+    <div class="hero-grid">
+      <div class="hero-copy reveal is-visible">
+        <h1>Roasted by ear,<br>not by algorithm.</h1>
+        <p class="sub">Direct-fire batches of 12kg, tracked by probe and instinct — never a PID, never a profile. Southeast Portland, Oregon.</p>
+        <div class="hero-cta">
+          <a class="btn btn--primary" href="#lineup">Shop the Winter Lineup</a>
+          <a class="btn btn--ghost" href="#process">How We Roast</a>
+        </div>
+      </div>
+
+      <div class="hero-chart reveal is-visible" aria-label="Illustrative roast curve showing temperature over time from charge to drop">
+        <div class="hero-chart-head">
+          <p class="label">Roast readout — Guji Natural, Lot 04</p>
+          <p class="label">11:40 total</p>
+        </div>
+        <svg viewBox="0 0 640 380" role="img" aria-hidden="false">
+          <g class="chart-grid">
+            <line x1="50" y1="40" x2="50" y2="350"></line>
+            <line x1="50" y1="350" x2="610" y2="350"></line>
+            <line x1="50" y1="260" x2="610" y2="260" stroke-dasharray="1 6"></line>
+            <line x1="50" y1="170" x2="610" y2="170" stroke-dasharray="1 6"></line>
+            <line x1="50" y1="80" x2="610" y2="80" stroke-dasharray="1 6"></line>
+          </g>
+          <text class="chart-axis-text" x="14" y="354">90°</text>
+          <text class="chart-axis-text" x="8" y="264">150°</text>
+          <text class="chart-axis-text" x="8" y="174">200°</text>
+          <text class="chart-axis-text" x="8" y="84">230°C</text>
+
+          <path id="roast-path" d="M70,300 C100,320 120,335 140,330 C190,320 230,290 260,250 C320,210 370,175 420,140 C470,110 520,90 560,70"></path>
+
+          <line class="chart-drop" x1="70" y1="300" x2="70" y2="350"></line>
+          <circle class="chart-dot-halo" cx="70" cy="300" r="9"></circle>
+          <circle class="chart-dot" cx="70" cy="300" r="4"></circle>
+          <text class="chart-marker-text" x="78" y="326">CHARGE</text>
+          <text class="chart-marker-sub" x="78" y="338">0:00 · 204°C</text>
+
+          <line class="chart-drop" x1="260" y1="250" x2="260" y2="350"></line>
+          <circle class="chart-dot-halo" cx="260" cy="250" r="9"></circle>
+          <circle class="chart-dot" cx="260" cy="250" r="4"></circle>
+          <text class="chart-marker-text" x="230" y="242">YELLOWING</text>
+          <text class="chart-marker-sub" x="230" y="230">4:30 · 160°C</text>
+
+          <line class="chart-drop" x1="420" y1="140" x2="420" y2="350"></line>
+          <circle class="chart-dot-halo" cx="420" cy="140" r="9"></circle>
+          <circle class="chart-dot" cx="420" cy="140" r="4"></circle>
+          <text class="chart-marker-text" x="392" y="126">FIRST CRACK</text>
+          <text class="chart-marker-sub" x="392" y="114">9:15 · 196°C</text>
+
+          <line class="chart-drop" x1="560" y1="70" x2="560" y2="350"></line>
+          <circle class="chart-dot-halo" cx="560" cy="70" r="9"></circle>
+          <circle class="chart-dot" cx="560" cy="70" r="4"></circle>
+          <text class="chart-marker-text" x="480" y="56">DROP</text>
+          <text class="chart-marker-sub" x="480" y="44">11:40 · 218°C</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap philosophy-grid">
+      <div class="reveal">
+        <p class="pull-quote">"A drum roaster with no computer attached isn't a limitation. It's the entire point."</p>
+        <p>Most roasters our size switched to electric drums with software profiling years ago — load a curve, walk away, get the same batch every time. We kept the gas flame and the cast iron. It means every batch is slightly different, and it means someone has to stand in front of the drum for the full eleven minutes, listening for the crack instead of watching a graph tell them it happened. That's the trade we make on purpose.</p>
+      </div>
+      <div class="reveal">
+        <dl class="spec-strip">
+          <div class="spec-row">
+            <dt>Batch size</dt>
+            <dd class="mono">12kg</dd>
+          </div>
+          <div class="spec-row">
+            <dt>Heat source</dt>
+            <dd class="mono">Open gas flame</dd>
+          </div>
+          <div class="spec-row">
+            <dt>Control method</dt>
+            <dd class="mono">Probe + ear</dd>
+          </div>
+          <div class="spec-row">
+            <dt>Roast software</dt>
+            <dd class="mono">None</dd>
+          </div>
+          <div class="spec-row">
+            <dt>Avg. roast loss</dt>
+            <dd class="mono">14.2%</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="lineup">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="label">Winter lineup — 2026</p>
+        <h2>Four lots, roasted in the order they arrived.</h2>
+      </div>
+
+      <div class="beans-list">
+        <article class="bean-row bean-row--feature reveal">
+          <div class="bean-index mono">01</div>
+          <div>
+            <h3 class="bean-name">Guji Natural, Lot 04</h3>
+            <p class="bean-origin">Ethiopia · Guji Zone, Uraga · 1,970m · Natural process</p>
+            <ul class="bean-notes">
+              <li>Strawberry</li>
+              <li>Jasmine</li>
+              <li>Cane sugar</li>
+            </ul>
+            <p class="bean-meta">Micro-lot · 40 bags roasted per batch · light-medium roast · 14.6% loss</p>
+          </div>
+          <div class="bean-price mono">$23<small>12oz bag</small></div>
+        </article>
+
+        <article class="bean-row reveal">
+          <div class="bean-index mono">02</div>
+          <div>
+            <h3 class="bean-name">Yirgacheffe Kochere</h3>
+            <p class="bean-origin">Ethiopia · Gedeo Zone · 2,050m · Washed process</p>
+            <ul class="bean-notes">
+              <li>Bergamot</li>
+              <li>White peach</li>
+              <li>Black tea</li>
+            </ul>
+            <p class="bean-meta">Light roast · 13.1% loss</p>
+          </div>
+          <div class="bean-price mono">$22<small>12oz bag</small></div>
+        </article>
+
+        <article class="bean-row reveal">
+          <div class="bean-index mono">03</div>
+          <div>
+            <h3 class="bean-name">Huila Reserve</h3>
+            <p class="bean-origin">Colombia · Huila · 1,760m · Washed process</p>
+            <ul class="bean-notes">
+              <li>Brown sugar</li>
+              <li>Red apple</li>
+              <li>Marcona almond</li>
+            </ul>
+            <p class="bean-meta">Medium roast · 15.0% loss</p>
+          </div>
+          <div class="bean-price mono">$19<small>12oz bag</small></div>
+        </article>
+
+        <article class="bean-row reveal">
+          <div class="bean-index mono">04</div>
+          <div>
+            <h3 class="bean-name">Cerrado Mineiro</h3>
+            <p class="bean-origin">Brazil · Minas Gerais · 1,100m · Natural process</p>
+            <ul class="bean-notes">
+              <li>Dark chocolate</li>
+              <li>Hazelnut</li>
+              <li>Molasses</li>
+            </ul>
+            <p class="bean-meta">Medium-dark roast · 16.3% loss</p>
+          </div>
+          <div class="bean-price mono">$17<small>12oz bag</small></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="process">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Four stages, one person, every batch.</h2>
+      </div>
+
+      <div class="process-line">
+        <div class="process-line-fill draw-line"></div>
+      </div>
+
+      <div class="process-steps">
+        <div class="process-step reveal">
+          <p class="num">01 / 0:00</p>
+          <h3>Charge</h3>
+          <p class="temp mono">204°C</p>
+          <p>Drum loaded, flame lit beneath cast iron. Cold beans drop the internal temperature fast — this dip is normal and unavoidable with a manual profile.</p>
+        </div>
+        <div class="process-step reveal">
+          <p class="num">02 / 4:30</p>
+          <h3>Yellowing</h3>
+          <p class="temp mono">160°C</p>
+          <p>Grassy smell fades, sugars start to brown. The roaster adjusts flame by color and smell — no set curve to follow.</p>
+        </div>
+        <div class="process-step reveal">
+          <p class="num">03 / 9:15</p>
+          <h3>First Crack</h3>
+          <p class="temp mono">196°C</p>
+          <p>Moisture vents audibly. From here the roaster's ears matter more than the probe — every second past this point is a choice.</p>
+        </div>
+        <div class="process-step reveal">
+          <p class="num">04 / 11:40</p>
+          <h3>Drop</h3>
+          <p class="temp mono">218°C</p>
+          <p>Beans hit the cooling tray. Average loss across a batch runs 14.2%, logged by hand in the roast book.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--paper" id="subscription">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="label label--paper">Quarterly subscription</p>
+        <h2>The Standing Order.</h2>
+      </div>
+
+      <div class="ticket reveal">
+        <div class="ticket-price">
+          <div class="amount mono">$68</div>
+          <p class="cadence">per quarter, billed on shipment</p>
+        </div>
+        <div>
+          <dl class="ticket-specs">
+            <div>
+              <dt>Shipments</dt>
+              <dd>4 per year — solstice and equinox</dd>
+            </div>
+            <div>
+              <dt>Each box</dt>
+              <dd>Two 12oz bags, roaster's seasonal pick</dd>
+            </div>
+            <div>
+              <dt>Selection</dt>
+              <dd>No lot repeats within a subscription year</dd>
+            </div>
+            <div>
+              <dt>Commitment</dt>
+              <dd>Cancel anytime before the next ship date</dd>
+            </div>
+          </dl>
+          <div class="ticket-cta">
+            <a class="btn btn--paper" href="mailto:order@emberlinecoffee.com?subject=Quarterly%20Subscription">Start a Subscription</a>
+          </div>
+          <p class="ticket-note">No refunds on beans already roasted and shipped.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section studio" id="studio">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>The roasting floor.</h2>
+      </div>
+      <div class="studio-grid">
+        <dl class="studio-col reveal">
+          <div>
+            <dt class="label">Address</dt>
+            <dd>2214 SE Division St, Portland, OR 97202 — roasting floor only, no walk-in retail. Orders ship or ride out by courier.</dd>
+          </div>
+          <div>
+            <dt class="label">Roasting days</dt>
+            <dd>Tuesdays and Fridays. Each batch is 12kg, so lots sell out — the lineup above reflects what's actually in the queue.</dd>
+          </div>
+        </dl>
+        <dl class="studio-col reveal">
+          <div>
+            <dt class="label">Shipping</dt>
+            <dd>Within 48 hours of roast, USPS Priority nationwide. We don't hold roasted stock — everything ships close to the drop.</dd>
+          </div>
+          <div>
+            <dt class="label">Local delivery</dt>
+            <dd>Free bike-courier delivery within Portland city limits, every Thursday. Order by Wednesday noon.</dd>
+          </div>
+          <div>
+            <dt class="label">Contact</dt>
+            <dd><a href="mailto:order@emberlinecoffee.com">order@emberlinecoffee.com</a></dd>
+          </div>
+        </dl>
+      </div>
+      <p class="studio-watermark" aria-hidden="true">Portland, OR</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap footer-grid">
+    <div class="wordmark" style="font-size:0.95rem;">EMBER<span>LINE</span></div>
+    <ul class="footer-nav">
+      <li><a href="#lineup">Lineup</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#subscription">Subscription</a></li>
+      <li><a href="#studio">Studio</a></li>
+    </ul>
+    <p class="footer-fine">© 2026 Emberline Coffee Roasters. Portland, Oregon.</p>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Scroll reveal for content blocks
+    var revealEls = document.querySelectorAll(".reveal, .draw-line");
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      revealEls.forEach(function(el){ el.classList.add("is-visible"); });
+    } else {
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2, rootMargin: "0px 0px -8% 0px" });
+      revealEls.forEach(function(el){ io.observe(el); });
+    }
+
+    // Roast curve draw-in (entrance sequence, precise path length)
+    var path = document.getElementById("roast-path");
+    if (path) {
+      if (reduceMotion) {
+        path.style.strokeDashoffset = "0";
+      } else {
+        var len = path.getTotalLength();
+        path.style.strokeDasharray = len;
+        path.style.strokeDashoffset = len;
+        path.style.transition = "stroke-dashoffset 1.6s cubic-bezier(0.16,1,0.3,1) 0.3s";
+        requestAnimationFrame(function(){
+          requestAnimationFrame(function(){
+            path.style.strokeDashoffset = "0";
+          });
+        });
+      }
+    }
+  })();
+</script>
+
+</body>
+</html>

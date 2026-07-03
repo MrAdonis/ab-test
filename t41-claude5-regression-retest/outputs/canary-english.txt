@@ -1,0 +1,7 @@
+A mutex (mutual exclusion lock) is a synchronization primitive used in concurrent programming to prevent multiple threads from accessing a shared resource simultaneously.
+
+- Only one thread can "hold" the mutex at a time.
+- A thread locks the mutex before touching shared data, and unlocks it afterward.
+- If another thread tries to lock it while it's held, that thread blocks (waits) until it's released.
+
+This prevents race conditions where two threads modify the same data at the same time and corrupt it. Common in languages like C++ (`std::mutex`), Java (`synchronized`), Python (`threading.Lock`), Go (`sync.Mutex`), etc.

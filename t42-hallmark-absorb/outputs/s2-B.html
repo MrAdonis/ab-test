@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emberline Coffee Roasters — Direct-Fire Small-Batch Roasting, Portland OR</title>
+<meta name="description" content="Emberline Coffee Roasters is a small-batch, direct-fire roasting studio in Portland, Oregon. No café — just beans, roasted to the curve, shipped within 48 hours.">
+<meta name="theme-color" content="#f3ede2">
+<style>
+  /* ============ RESET ============ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+  img, svg { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  ul { list-style: none; }
+
+  /* ============ TOKENS ============ */
+  :root {
+    --paper: #f3ede2;
+    --paper-warm: #e9e0cf;
+    --ink: #201b15;
+    --ink-soft: #57493c;
+    --ink-faint: #857a6c;
+    --accent: #b8441c;
+    --accent-tint: #e2895a;
+    --dark: #1c1712;
+    --dark-ink: #f3efe6;
+    --dark-ink-soft: #c8beae;
+    --rule: rgba(32, 27, 21, 0.16);
+    --rule-strong: rgba(32, 27, 21, 0.32);
+    --rule-dark: rgba(243, 239, 230, 0.2);
+    --shadow-tint: 24, 16, 8;
+
+    --font-serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+
+    --container: 1180px;
+    --pad: clamp(20px, 5vw, 64px);
+    --section-pad: clamp(64px, 9vw, 128px);
+
+    --dur-fast: 160ms;
+    --dur-med: 220ms;
+    --dur-space: 380ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: clip;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    line-height: 1.08;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  p { text-wrap: pretty; }
+
+  .container {
+    max-width: var(--container);
+    margin: 0 auto;
+    padding-left: var(--pad);
+    padding-right: var(--pad);
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ GRAIN OVERLAY ============ */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    filter: url(#grain-filter);
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+  }
+  /* ============ REVEAL ============ */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity var(--dur-space) var(--ease-out), transform var(--dur-space) var(--ease-out);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ============ EYEBROW ============ */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 1.5px;
+    background: var(--accent);
+    display: block;
+  }
+  .eyebrow.on-dark { color: var(--dark-ink-soft); }
+  .eyebrow.on-dark::before { background: var(--accent-tint); }
+
+  /* ============ HEADER ============ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+  .site-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .wordmark {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .wordmark .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    transform: translateY(-1px);
+  }
+  .main-nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 2.4vw, 28px);
+    flex-wrap: wrap;
+  }
+  .main-nav a {
+    position: relative;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    padding: 12px 2px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .main-nav a::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 10px;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-med) var(--ease-out);
+  }
+  .main-nav a:hover::after,
+  .main-nav a:focus-visible::after { transform: scaleX(1); }
+  .main-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+  .main-nav .nav-cta {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 18px;
+    border-radius: 2px;
+    transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .main-nav .nav-cta::after { display: none; }
+  .main-nav .nav-cta:hover { background: var(--accent); transform: translateY(-1px); }
+  .main-nav .nav-cta:active { transform: translateY(0) scale(0.98); }
+  .main-nav .nav-cta:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  @media (max-width: 719px) {
+    .main-nav .nav-link-secondary { display: none; }
+  }
+
+  /* ============ BUTTONS ============ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 13px 26px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border-radius: 2px;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(var(--shadow-tint), 0.2);
+  }
+  .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(var(--shadow-tint), 0.45); }
+  .btn-primary:active { transform: translateY(0) scale(0.98); }
+  .btn-primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  .btn-ghost {
+    color: var(--ink);
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 13px 2px;
+    border-radius: 0;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .btn-ghost:active { transform: translateY(1px); }
+
+  .btn-on-dark.btn-primary { background: var(--accent-tint); color: var(--dark); }
+  .btn-on-dark.btn-primary:hover { filter: brightness(1.06); }
+  .btn-on-dark.btn-primary:focus-visible { outline-color: var(--dark-ink); }
+
+  /* ============ HERO ============ */
+  .hero {
+    position: relative;
+    min-height: 92dvh;
+    display: flex;
+    align-items: center;
+    padding-top: clamp(40px, 6vw, 72px);
+    padding-bottom: clamp(40px, 6vw, 72px);
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+  .hero-copy { max-width: 640px; }
+  .hero-copy .eyebrow { margin-bottom: 22px; }
+  .hero-title {
+    font-size: clamp(2.6rem, 2.05rem + 2.9vw, 4.6rem);
+    letter-spacing: -0.015em;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-sub {
+    margin-top: 24px;
+    max-width: 46ch;
+    font-size: clamp(1rem, 0.94rem + 0.3vw, 1.15rem);
+    color: var(--ink-soft);
+    line-height: 1.65;
+  }
+  .hero-actions {
+    margin-top: 36px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px 32px;
+  }
+
+  .hero-visual {
+    position: relative;
+    width: 100%;
+    height: clamp(220px, 34vw, 420px);
+    overflow: visible;
+  }
+  .hero-visual-clip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .hero-curve-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 118%;
+    height: 100%;
+    transform: translateX(-2%);
+  }
+  .curve-path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.25;
+    stroke-linecap: round;
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    animation: draw-curve 1.9s var(--ease-out) 0.3s forwards;
+  }
+  .curve-path.curve-hot {
+    stroke: var(--accent);
+    stroke-dasharray: 340;
+    stroke-dashoffset: 340;
+    animation: draw-curve-hot 1s var(--ease-out) 1.7s forwards;
+  }
+  @keyframes draw-curve { to { stroke-dashoffset: 0; } }
+  @keyframes draw-curve-hot { to { stroke-dashoffset: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .curve-path, .curve-path.curve-hot { animation: none; stroke-dashoffset: 0; }
+  }
+  .curve-marker { fill: var(--accent); }
+  .curve-marker.drop { fill: var(--ink); }
+  .curve-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    fill: var(--ink-soft);
+    letter-spacing: 0.04em;
+  }
+  .curve-label.hot { fill: var(--accent); }
+
+  @media (min-width: 860px) {
+    .hero-grid { grid-template-columns: 1.15fr 1fr; gap: 24px; }
+    .hero-visual { height: clamp(320px, 30vw, 480px); }
+  }
+
+  /* ============ SECTION SHELL ============ */
+  section { position: relative; }
+  .section-pad { padding-top: var(--section-pad); padding-bottom: var(--section-pad); }
+  .rule-top { border-top: 1px solid var(--rule); }
+  .section-head { max-width: 640px; margin-bottom: clamp(36px, 5vw, 56px); }
+  .section-head h2 { font-size: clamp(1.9rem, 1.6rem + 1.4vw, 2.8rem); }
+  .section-head .eyebrow { margin-bottom: 16px; }
+
+  /* ============ QUOTE ============ */
+  .quote-section { background: var(--paper-warm); }
+  .quote-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: left;
+  }
+  .quote-mark {
+    font-family: var(--font-serif);
+    font-size: 4.5rem;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: block;
+  }
+  blockquote {
+    font-family: var(--font-serif);
+    font-size: clamp(1.4rem, 1.1rem + 1.6vw, 2.15rem);
+    line-height: 1.35;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .quote-attr {
+    margin-top: 28px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .quote-attr strong { color: var(--ink); font-weight: 700; }
+
+  /* ============ BEAN LIST ============ */
+  .bean-list-head-row {
+    display: none;
+  }
+  @media (min-width: 780px) {
+    .bean-list-head-row {
+      display: grid;
+      grid-template-columns: 2.6fr 1.5fr 1.9fr 0.9fr;
+      gap: 20px;
+      padding: 0 0 14px;
+      border-bottom: 1px solid var(--rule-strong);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+  }
+  .bean-row {
+    position: relative;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .bean-row:first-of-type { padding-top: 8px; }
+  .bean-row::before {
+    content: "";
+    position: absolute;
+    inset: 0 -20px;
+    background: var(--paper-warm);
+    opacity: 0;
+    transition: opacity var(--dur-med) var(--ease-out);
+    z-index: -1;
+    border-radius: 4px;
+  }
+  .bean-row:hover::before, .bean-row:focus-within::before { opacity: 1; }
+
+  @media (min-width: 780px) {
+    .bean-row { grid-template-columns: 2.6fr 1.5fr 1.9fr 0.9fr; gap: 20px; align-items: center; padding: 30px 0; }
+  }
+
+  .bean-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+  }
+  .bean-name {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .bean-origin { color: var(--ink-soft); font-size: 14px; margin-top: 3px; }
+
+  .bean-notes { font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .bean-notes strong { color: var(--ink); font-weight: 600; display: block; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; font-family: var(--font-mono); }
+
+  .roast-scale {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .roast-scale span {
+    width: 5px;
+    height: 20px;
+    background: var(--rule-strong);
+    border-radius: 1px;
+  }
+  .roast-scale span.on { background: var(--accent); }
+  .roast-scale-label { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-soft); margin-top: 8px; letter-spacing: 0.04em; }
+
+  .bean-price {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+  }
+  @media (min-width: 780px) { .bean-price { text-align: right; } }
+  .bean-price small { display: block; font-size: 10.5px; color: var(--ink-faint); font-weight: 400; margin-top: 2px; }
+
+  /* ============ PROCESS ROW ============ */
+  .process-section { position: relative; overflow: hidden; }
+  .process-watermark {
+    position: absolute;
+    right: -6%;
+    top: 8%;
+    width: 62%;
+    opacity: 0.07;
+    pointer-events: none;
+  }
+  .process-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+  }
+  @media (min-width: 900px) {
+    .process-row { grid-template-columns: repeat(5, 1fr); }
+  }
+  .process-step {
+    padding: 26px 0;
+    border-top: 1px solid var(--rule-strong);
+  }
+  @media (min-width: 900px) {
+    .process-step {
+      padding: 0 20px 0 0;
+      border-top: none;
+      border-left: 1px solid var(--rule-strong);
+      padding-left: 20px;
+    }
+    .process-step:first-child { border-left: none; padding-left: 0; }
+    .process-step:nth-child(2) { transform: translateY(18px); }
+    .process-step:nth-child(4) { transform: translateY(18px); }
+  }
+  .process-num {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .process-step h3 { font-size: 1.05rem; font-family: var(--font-sans); font-weight: 700; margin-bottom: 8px; }
+  .process-step p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+
+  /* ============ SUBSCRIBE COMPARE ============ */
+  .compare-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+  @media (min-width: 780px) {
+    .compare-wrap { grid-template-columns: 1fr 1fr; }
+    .compare-wrap::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--rule-strong);
+    }
+  }
+  .compare-plan { padding: 8px 0 40px; }
+  @media (min-width: 780px) {
+    .compare-plan:first-child { padding-right: 48px; }
+    .compare-plan:last-child { padding-left: 48px; }
+  }
+  .compare-plan .plan-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .compare-plan h3 { font-size: 1.6rem; margin-top: 10px; }
+  .compare-plan .plan-price { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; margin-top: 18px; }
+  .compare-plan .plan-price span { font-size: 13px; color: var(--ink-soft); font-weight: 400; }
+  .compare-plan p.plan-desc { margin-top: 14px; color: var(--ink-soft); font-size: 14.5px; max-width: 42ch; }
+  .plan-features { margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .plan-features li { font-size: 13.5px; color: var(--ink-soft); display: flex; gap: 10px; align-items: flex-start; }
+  .plan-features li::before { content: "—"; color: var(--accent); flex-shrink: 0; }
+  .compare-plan .btn { margin-top: 26px; }
+
+  /* ============ VISIT / STUDIO ============ */
+  .visit-section { background: var(--dark); color: var(--dark-ink); }
+  .visit-section .rule-top { border-color: var(--rule-dark); }
+  .visit-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  @media (min-width: 860px) {
+    .visit-grid { grid-template-columns: 1.2fr 1fr; gap: 64px; }
+  }
+  .visit-section h2 { color: var(--dark-ink); }
+  .visit-section p { color: var(--dark-ink-soft); }
+  .visit-copy p { font-size: 15px; line-height: 1.65; margin-top: 14px; max-width: 52ch; }
+  .visit-details {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    border-left: 1px solid var(--rule-dark);
+    padding-left: 28px;
+  }
+  .visit-details dt {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-tint);
+    margin-bottom: 6px;
+  }
+  .visit-details dd { font-size: 15px; color: var(--dark-ink); }
+  .visit-details a { border-bottom: 1px solid var(--rule-dark); transition: border-color var(--dur-fast); }
+  .visit-details a:hover { border-color: var(--accent-tint); color: var(--accent-tint); }
+  .visit-details a:focus-visible { outline: 2px solid var(--accent-tint); outline-offset: 3px; }
+
+  .map-mark {
+    width: 100%;
+    max-width: 280px;
+    opacity: 0.9;
+  }
+
+  /* ============ FAQ ============ */
+  .faq-list { border-top: 1px solid var(--rule-strong); }
+  .faq-item { border-bottom: 1px solid var(--rule); }
+  .faq-item summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 4px;
+    min-height: 44px;
+    cursor: pointer;
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
+  .faq-toggle {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    position: relative;
+    transition: transform var(--dur-med) var(--ease-out);
+  }
+  .faq-toggle::before, .faq-toggle::after {
+    content: "";
+    position: absolute;
+    background: var(--accent);
+    top: 50%; left: 50%;
+  }
+  .faq-toggle::before { width: 14px; height: 1.6px; transform: translate(-50%, -50%); }
+  .faq-toggle::after { width: 1.6px; height: 14px; transform: translate(-50%, -50%); transition: transform var(--dur-med) var(--ease-out); }
+  details[open] .faq-toggle::after { transform: translate(-50%, -50%) rotate(90deg) scale(0); }
+  .faq-item p {
+    padding: 0 4px 24px;
+    max-width: 62ch;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+
+  /* ============ FOOTER CTA ============ */
+  .footer-cta { background: var(--dark); color: var(--dark-ink); }
+  .footer-top { display: grid; grid-template-columns: 1fr; gap: 40px; align-items: end; }
+  @media (min-width: 860px) { .footer-top { grid-template-columns: 1.3fr 1fr; } }
+  .footer-cta h2 { color: var(--dark-ink); font-size: clamp(1.9rem, 1.5rem + 1.8vw, 3rem); max-width: 14ch; }
+
+  .signup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 420px;
+  }
+  .signup-row { display: flex; gap: 0; border-bottom: 1.5px solid var(--rule-dark); transition: border-color var(--dur-fast); }
+  .signup-row:focus-within { border-color: var(--accent-tint); }
+  .signup-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--dark-ink);
+    font-size: 15px;
+    padding: 12px 4px;
+    min-height: 44px;
+    font-family: var(--font-sans);
+  }
+  .signup-row input::placeholder { color: var(--dark-ink-soft); }
+  .signup-row input:focus { outline: none; }
+  .signup-row button {
+    padding: 12px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-tint);
+    letter-spacing: 0.03em;
+    min-height: 44px;
+    transition: color var(--dur-fast);
+  }
+  .signup-row button:hover { color: var(--dark-ink); }
+  .signup-row button:focus-visible { outline: 2px solid var(--accent-tint); outline-offset: 2px; }
+  .signup-note { font-size: 12px; color: var(--dark-ink-soft); }
+
+  .footer-bottom {
+    margin-top: clamp(56px, 8vw, 96px);
+    padding-top: 28px;
+    border-top: 1px solid var(--rule-dark);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+    font-size: 12.5px;
+    color: var(--dark-ink-soft);
+  }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
+  .footer-links a { padding: 10px 0; min-height: 44px; display: inline-flex; align-items: center; }
+  .footer-links a:hover { color: var(--accent-tint); }
+  .footer-links a:focus-visible { outline: 2px solid var(--accent-tint); outline-offset: 3px; }
+
+  /* ============ MISC ============ */
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="grain-filter" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="noise"/>
+    <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0"/>
+  </filter>
+</svg>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="container">
+    <a href="#top" class="wordmark"><span class="dot"></span>Emberline</a>
+    <nav class="main-nav" aria-label="Primary">
+      <a href="#roast" class="nav-link-secondary">Current Roast</a>
+      <a href="#process" class="nav-link-secondary">How We Roast</a>
+      <a href="#subscribe">Subscribe</a>
+      <a href="#visit" class="nav-link-secondary">Visit</a>
+      <a href="#roast" class="nav-cta">Shop Beans</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO — asymmetric split + roast-curve diagram ============ -->
+  <section class="hero container">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Portland, Oregon — Direct-Fire Roastery</p>
+        <h1 class="hero-title">We roast to the curve, <em>not the clock.</em></h1>
+        <p class="hero-sub">Direct-fire batches of 12 kilos or less, tracked bean by bean from green to first crack to cup.</p>
+        <div class="hero-actions">
+          <a href="#roast" class="btn btn-primary">Shop the current roast</a>
+          <a href="#process" class="btn-ghost">Read the roast log</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-visual-clip">
+          <svg class="hero-curve-svg" viewBox="0 0 620 380" preserveAspectRatio="xMidYMid meet">
+            <path class="curve-path" d="M10,230 C90,278 150,286 185,262 C240,222 270,150 335,104 C395,62 450,42 505,32 C540,26 570,22 600,18" />
+            <path class="curve-path curve-hot" d="M400,52 C450,42 505,32 540,26 C560,23 580,20 600,18" />
+            <circle class="curve-marker" cx="400" cy="52" r="4.5" />
+            <text class="curve-label hot" x="410" y="46">FIRST CRACK · 396°F</text>
+            <circle class="curve-marker drop" cx="600" cy="18" r="4.5" />
+            <text class="curve-label" x="486" y="12">DROP · 208°C</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PHILOSOPHY — full-width pull-quote ============ -->
+  <section class="quote-section section-pad">
+    <div class="container">
+      <div class="quote-wrap reveal">
+        <span class="quote-mark" aria-hidden="true">&ldquo;</span>
+        <blockquote>Direct fire roasting rewards attention, not automation. We ride the curve by ear, by smell, by eye — adjusting gas and drum speed by hand, batch after batch, until the bean tells us it's done.</blockquote>
+        <p class="quote-attr"><strong>Mara Voss</strong> — Head Roaster &amp; Founder, Emberline</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CURRENT LINEUP — divide-y editorial list ============ -->
+  <section id="roast" class="section-pad rule-top">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Current Lineup — Roasted This Week</p>
+        <h2>Four lots, one drum, no shortcuts.</h2>
+      </div>
+
+      <div class="bean-list-head-row">
+        <span>Origin</span>
+        <span>Roast Level</span>
+        <span>Tasting Notes</span>
+        <span>Price</span>
+      </div>
+
+      <div class="reveal">
+        <div class="bean-row">
+          <div>
+            <span class="bean-id">01</span>
+            <h3 class="bean-name">Kochere</h3>
+            <p class="bean-origin">Ethiopia · Washed · 1,950m</p>
+          </div>
+          <div>
+            <div class="roast-scale" aria-hidden="true"><span class="on"></span><span class="on"></span><span></span><span></span><span></span></div>
+            <p class="roast-scale-label">Light</p>
+          </div>
+          <div class="bean-notes"><strong>Notes</strong>Bergamot, white peach, black tea</div>
+          <div class="bean-price">$22<small>per 12oz bag</small></div>
+        </div>
+
+        <div class="bean-row">
+          <div>
+            <span class="bean-id">02</span>
+            <h3 class="bean-name">Huila</h3>
+            <p class="bean-origin">Colombia · Washed · 1,700m</p>
+          </div>
+          <div>
+            <div class="roast-scale" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span></div>
+            <p class="roast-scale-label">Medium-light</p>
+          </div>
+          <div class="bean-notes"><strong>Notes</strong>Red apple, brown sugar, cacao nib</div>
+          <div class="bean-price">$20<small>per 12oz bag</small></div>
+        </div>
+
+        <div class="bean-row">
+          <div>
+            <span class="bean-id">03</span>
+            <h3 class="bean-name">Nyeri</h3>
+            <p class="bean-origin">Kenya · Washed · 1,800m</p>
+          </div>
+          <div>
+            <div class="roast-scale" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
+            <p class="roast-scale-label">Medium</p>
+          </div>
+          <div class="bean-notes"><strong>Notes</strong>Blackcurrant, tomato leaf, lime zest</div>
+          <div class="bean-price">$23<small>per 12oz bag</small></div>
+        </div>
+
+        <div class="bean-row">
+          <div>
+            <span class="bean-id">04</span>
+            <h3 class="bean-name">Chiapas</h3>
+            <p class="bean-origin">Mexico · Natural · 1,400m</p>
+          </div>
+          <div>
+            <div class="roast-scale" aria-hidden="true"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div>
+            <p class="roast-scale-label">Medium-dark</p>
+          </div>
+          <div class="bean-notes"><strong>Notes</strong>Fig, molasses, toasted pecan</div>
+          <div class="bean-price">$19<small>per 12oz bag</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROCESS — horizontal step row with watermark ============ -->
+  <section id="process" class="process-section section-pad rule-top">
+    <svg class="process-watermark" viewBox="0 0 620 380" aria-hidden="true">
+      <path fill="none" stroke="#201b15" stroke-width="2.25" stroke-linecap="round" d="M10,230 C90,278 150,286 185,262 C240,222 270,150 335,104 C395,62 450,42 505,32 C540,26 570,22 600,18" />
+    </svg>
+    <div class="container">
+      <div class="section-head reveal">
+        <h2>How we roast</h2>
+      </div>
+      <div class="process-row reveal">
+        <div class="process-step">
+          <span class="process-num">01</span>
+          <h3>Source</h3>
+          <p>We buy in small lots directly from importers who share farm-level data — altitude, varietal, process, harvest date.</p>
+        </div>
+        <div class="process-step">
+          <span class="process-num">02</span>
+          <h3>Cup</h3>
+          <p>Every lot is cupped blind against three roast profiles before we commit to a full batch size.</p>
+        </div>
+        <div class="process-step">
+          <span class="process-num">03</span>
+          <h3>Roast</h3>
+          <p>12kg batches on a refurbished 1985 Probat, gas-fed drum, adjusted by hand through every stage of the curve.</p>
+        </div>
+        <div class="process-step">
+          <span class="process-num">04</span>
+          <h3>Rest</h3>
+          <p>Roasted beans rest 5 to 10 days so CO2 can escape before we bag a single order.</p>
+        </div>
+        <div class="process-step">
+          <span class="process-num">05</span>
+          <h3>Ship</h3>
+          <p>Bagged and shipped within 48 hours of roast — never before, no exceptions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUBSCRIBE — 2-col comparison ============ -->
+  <section id="subscribe" class="section-pad rule-top">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Subscribe</p>
+        <h2>Two ways to keep the bag full.</h2>
+      </div>
+      <div class="compare-wrap reveal">
+        <div class="compare-plan">
+          <p class="plan-tag">Plan A</p>
+          <h3>Single Origin, Your Call</h3>
+          <p class="plan-price">$22<span> / bag</span></p>
+          <p class="plan-desc">Pick one bean from the current lineup, delivered every two weeks. Swap your pick anytime before it roasts.</p>
+          <ul class="plan-features">
+            <li>Biweekly delivery, 12oz bag</li>
+            <li>Free shipping at 2 bags or more</li>
+            <li>Change your bean before each roast</li>
+            <li>Pause or cancel anytime, no fee</li>
+          </ul>
+          <a href="#top" class="btn btn-primary">Start Single Origin</a>
+        </div>
+        <div class="compare-plan">
+          <p class="plan-tag">Plan B</p>
+          <h3>Roaster's Choice</h3>
+          <p class="plan-price">$20<span> / bag</span></p>
+          <p class="plan-desc">We pick, you discover — one new lot each month with a printed tasting-notes card and brew suggestions.</p>
+          <ul class="plan-features">
+            <li>Monthly delivery, 12oz bag</li>
+            <li>Free shipping, every shipment</li>
+            <li>Tasting notes card included</li>
+            <li>Pause or cancel anytime, no fee</li>
+          </ul>
+          <a href="#top" class="btn btn-primary">Start Roaster's Choice</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VISIT — dark editorial info block ============ -->
+  <section id="visit" class="visit-section section-pad">
+    <div class="container">
+      <div class="visit-grid reveal">
+        <div class="visit-copy">
+          <p class="eyebrow on-dark">The Studio</p>
+          <h2>No café. Just the drum, the beans, and the smell of a Tuesday roast.</h2>
+          <p>Emberline is a working roastery, not a coffee shop — there's no espresso bar, no seating, no oat milk menu. What you'll find is a 1985 Probat running four mornings a week and bags going out the door the same day they're filled.</p>
+          <p>Retail pickup is by appointment. Email ahead and we'll have your order bagged and dated when you arrive.</p>
+        </div>
+        <dl class="visit-details">
+          <div>
+            <dt>Address</dt>
+            <dd>4118 SE Division St, Portland, OR 97202</dd>
+          </div>
+          <div>
+            <dt>Roasting Hours</dt>
+            <dd>Tuesday–Friday, 8:00am–1:00pm</dd>
+          </div>
+          <div>
+            <dt>Public Cupping</dt>
+            <dd>First Saturday of every month, 10:00am — no RSVP needed</dd>
+          </div>
+          <div>
+            <dt>Contact</dt>
+            <dd><a href="mailto:hello@emberlinecoffee.com">hello@emberlinecoffee.com</a></dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ — accordion ============ -->
+  <section class="section-pad rule-top">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Questions</p>
+        <h2>Before you order</h2>
+      </div>
+      <div class="faq-list reveal">
+        <details class="faq-item">
+          <summary>Do you have a café?<span class="faq-toggle" aria-hidden="true"></span></summary>
+          <p>No — Emberline is a roasting studio, not a coffee shop. We sell beans, not lattes.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How fresh is the coffee when it ships?<span class="faq-toggle" aria-hidden="true"></span></summary>
+          <p>We ship within 48 hours of roast, and the roast date is printed on every bag — no batch codes to decode.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do you offer wholesale?<span class="faq-toggle" aria-hidden="true"></span></summary>
+          <p>Yes, for cafés and offices ordering 5kg or more per month. Email wholesale@emberlinecoffee.com to start a conversation.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I taste before I subscribe?<span class="faq-toggle" aria-hidden="true"></span></summary>
+          <p>We hold a public cupping the first Saturday of every month at 10am at the studio. No RSVP needed, just show up.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER CTA ============ -->
+  <footer class="footer-cta section-pad">
+    <div class="container">
+      <div class="footer-top reveal">
+        <h2>Good coffee is a decision made hundreds of times per batch.</h2>
+        <form class="signup-form" onsubmit="return false;">
+          <label class="visually-hidden" for="email-signup">Email address</label>
+          <div class="signup-row">
+            <input id="email-signup" type="email" placeholder="you@email.com" autocomplete="email" required>
+            <button type="submit">Get the roast log</button>
+          </div>
+          <p class="signup-note">One email a month when we drop a new lot. No spam, no filler.</p>
+        </form>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 Emberline Coffee Roasters. Portland, Oregon.</p>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="#roast">Shop</a>
+          <a href="#subscribe">Subscriptions</a>
+          <a href="#process">How We Roast</a>
+          <a href="#visit">Visit</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  (function () {
+    var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var targets = document.querySelectorAll('.reveal');
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+      targets.forEach(function (el) { el.classList.add('is-visible'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    targets.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiln &amp; Tide — Coastal Pottery Studio, Cornwall</title>
+<meta name="description" content="Kiln & Tide is an independent pottery studio on the Cornish coast. Wheel-thrown tableware and vessels, glazed in the colors of the sea. Commissions open.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#f3ede1;
+    --bg-alt:#eae1cf;
+    --surface:#fbf7ee;
+    --ink:#26221b;
+    --ink-soft:#4c453a;
+    --muted:#8a8171;
+    --line:#dcd0b8;
+    --line-strong:#c9b990;
+    --accent:#b6512f;
+    --accent-strong:#8a3c22;
+    --accent-ink:#fff8f0;
+    --teal:#3c6e6a;
+
+    --space-1: 8px;
+    --space-2: 16px;
+    --space-3: 24px;
+    --space-4: 32px;
+    --space-5: 48px;
+    --space-6: 64px;
+    --space-7: 96px;
+    --space-8: 140px;
+
+    --font-display: "Cormorant Garamond", "Iowan Old Style", "Songti SC", serif;
+    --font-body: "Work Sans", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+
+    --radius: 3px;
+    --ease-out: cubic-bezier(.16,1,.3,1);
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  img,svg{ display:block; max-width:100%; }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+
+  .container{
+    width:100%;
+    max-width:1180px;
+    margin-inline:auto;
+    padding-inline:var(--space-3);
+  }
+  @media (min-width:768px){ .container{ padding-inline:var(--space-5); } }
+
+  /* ---------- Skip link ---------- */
+  .skip-link{
+    position:absolute; left:var(--space-2); top:-60px;
+    background:var(--ink); color:var(--bg);
+    padding:12px 18px; border-radius:var(--radius);
+    z-index:200; transition:top .2s var(--ease-out);
+    font-size:14px;
+  }
+  .skip-link:focus{ top:var(--space-2); }
+
+  /* ---------- Focus ---------- */
+  :focus-visible{ outline:2px solid var(--accent-strong); outline-offset:3px; border-radius:2px; }
+
+  /* ---------- Header ---------- */
+  .site-header{
+    position:sticky; top:0; z-index:100;
+    background:rgba(243,237,225,.86);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-block:14px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--font-display); font-weight:600; font-size:21px;
+    letter-spacing:.01em; text-decoration:none;
+  }
+  .brand .mark{ width:30px; height:30px; color:var(--accent-strong); flex:none; }
+  .brand-amp{ color:var(--accent-strong); font-style:italic; }
+
+  .nav-links{
+    display:none;
+    align-items:center;
+    gap:var(--space-4);
+    font-size:14.5px;
+    font-weight:500;
+  }
+  .nav-links a{ text-decoration:none; padding:10px 2px; position:relative; }
+  .nav-links a::after{
+    content:""; position:absolute; left:0; right:0; bottom:6px; height:1px;
+    background:var(--accent-strong); transform:scaleX(0); transform-origin:left;
+    transition:transform .25s var(--ease-out);
+  }
+  .nav-links a:hover::after, .nav-links a:focus-visible::after{ transform:scaleX(1); }
+  .nav-cta{
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--accent-strong); color:var(--accent-ink);
+    padding:10px 20px; border-radius:2px; font-weight:600; font-size:14px;
+    text-decoration:none; min-height:44px;
+    transition:background .2s var(--ease-out), transform .15s var(--ease-out);
+  }
+  .nav-cta:hover{ background:var(--ink); }
+  .nav-cta:active{ transform:translateY(1px); }
+
+  @media (min-width:920px){
+    .nav-links{ display:flex; }
+    .nav-toggle{ display:none; }
+  }
+
+  .nav-toggle{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; background:none; border:1px solid var(--line-strong);
+    border-radius:2px; cursor:pointer;
+  }
+  .nav-toggle svg{ width:18px; height:18px; }
+
+  .mobile-panel{
+    display:none;
+    border-top:1px solid var(--line);
+    padding:var(--space-2) 0 var(--space-3);
+  }
+  .mobile-panel.is-open{ display:block; }
+  .mobile-panel a{
+    display:block; padding:12px 0; text-decoration:none; font-size:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .mobile-panel .nav-cta{ margin-top:var(--space-2); width:100%; }
+
+  /* ---------- Section scaffolding ---------- */
+  section{ position:relative; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12.5px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--accent-strong);
+  }
+  .eyebrow::before{ content:""; width:16px; height:1px; background:var(--accent-strong); }
+
+  [data-reveal]{ opacity:0; transform:translateY(18px); transition:opacity .6s var(--ease-out), transform .6s var(--ease-out); }
+  [data-reveal].is-visible{ opacity:1; transform:none; }
+  [data-reveal="1"]{ transition-delay:.02s; }
+  [data-reveal="2"]{ transition-delay:.12s; }
+  [data-reveal="3"]{ transition-delay:.22s; }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding-top: clamp(56px, 9vw, 108px);
+    padding-bottom: clamp(56px, 8vw, 96px);
+    overflow:hidden;
+  }
+  .hero-grid{
+    display:grid;
+    gap:var(--space-6);
+    align-items:end;
+  }
+  @media (min-width:960px){
+    .hero-grid{ grid-template-columns:1.15fr .85fr; align-items:center; }
+  }
+  .hero-copy .eyebrow{ margin-bottom:var(--space-3); }
+  .hero h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(42px, 7vw, 84px);
+    line-height:.98;
+    letter-spacing:-.01em;
+    margin:0 0 var(--space-3);
+    text-wrap:balance;
+  }
+  .hero h1 em{ font-style:italic; color:var(--accent-strong); font-weight:500; }
+  .hero .lede{
+    font-size:clamp(17px, 1.6vw, 19px);
+    color:var(--ink-soft);
+    max-width:46ch;
+    margin:0 0 var(--space-4);
+    text-wrap:pretty;
+  }
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:48px; padding:0 26px;
+    font-size:15px; font-weight:600;
+    border-radius:2px; text-decoration:none; cursor:pointer;
+    border:1px solid transparent;
+    transition:background .2s var(--ease-out), color .2s var(--ease-out), border-color .2s var(--ease-out), transform .15s var(--ease-out);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--accent-strong); color:var(--accent-ink); }
+  .btn-primary:hover{ background:var(--ink); }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line-strong); }
+  .btn-ghost:hover{ border-color:var(--ink); }
+
+  .hero-visual{
+    position:relative;
+    aspect-ratio:4/5;
+    border-radius:2px;
+    background:
+      radial-gradient(120% 140% at 20% 15%, rgba(182,81,47,.14), transparent 55%),
+      linear-gradient(155deg, #3c6e6a 0%, #24504c 46%, #17332f 100%);
+    overflow:hidden;
+  }
+  .hero-visual .rings{
+    position:absolute; inset:auto -10% -25% auto; width:78%;
+    opacity:.5; color:#eef4f1;
+  }
+  .hero-visual .rings.top{ inset:-18% -22% auto auto; width:60%; opacity:.28; }
+  .hero-visual .caption{
+    position:absolute; left:0; right:0; bottom:0;
+    padding:var(--space-3);
+    display:flex; justify-content:space-between; align-items:flex-end;
+    color:#f4efe4; font-size:12.5px; letter-spacing:.03em;
+  }
+  .hero-visual .caption strong{ display:block; font-family:var(--font-display); font-style:italic; font-size:19px; font-weight:500; }
+
+  /* ---------- Statement ---------- */
+  .statement{
+    padding-block: clamp(64px, 9vw, 120px);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    background:var(--bg-alt);
+  }
+  .statement-inner{ max-width:920px; margin-inline:auto; text-align:center; }
+  .statement p{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:clamp(26px, 4.4vw, 44px);
+    line-height:1.28;
+    margin:0;
+    text-wrap:balance;
+  }
+  .statement cite{
+    display:block; font-style:normal; font-family:var(--font-body);
+    font-size:13px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted); margin-top:var(--space-4); font-weight:600;
+  }
+
+  /* ---------- Gallery ---------- */
+  .gallery-section{ padding-block: clamp(72px, 9vw, 128px); }
+  .section-head{
+    display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end;
+    gap:var(--space-3); margin-bottom:var(--space-6);
+  }
+  .section-head h2{
+    font-family:var(--font-display); font-weight:600;
+    font-size:clamp(32px, 4vw, 48px); margin:10px 0 0; line-height:1.05;
+  }
+  .section-head .sub{ max-width:38ch; color:var(--ink-soft); font-size:15.5px; margin:10px 0 0; }
+
+  .gallery-grid{
+    display:grid; grid-template-columns:repeat(6, 1fr);
+    gap:var(--space-3);
+  }
+  .piece{ grid-column:span 6; display:flex; flex-direction:column; }
+  .piece .swatch{
+    position:relative; border-radius:2px; overflow:hidden;
+    aspect-ratio:4/3; background:var(--surface);
+  }
+  .piece .swatch .rings{ position:absolute; inset:0; width:100%; height:100%; opacity:.16; }
+  .piece .tag{
+    position:absolute; top:12px; left:12px;
+    background:rgba(20,16,11,.5); color:#fff;
+    font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+    padding:5px 9px; border-radius:2px; backdrop-filter:blur(2px);
+  }
+  .piece .info{ padding-top:14px; display:flex; justify-content:space-between; gap:var(--space-2); }
+  .piece h3{ font-family:var(--font-display); font-weight:600; font-size:20px; margin:0 0 4px; }
+  .piece .meta{ font-size:13.5px; color:var(--muted); margin:0; }
+  .piece .price{ font-size:13.5px; color:var(--ink-soft); white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+  .swatch.g1{ background:linear-gradient(150deg,#5b8f8a,#2a5450 70%); }
+  .swatch.g2{ background:linear-gradient(150deg,#d8c49c,#a98a5c 75%); }
+  .swatch.g3{ background:linear-gradient(150deg,#46403a,#211d19 75%); }
+  .swatch.g4{ background:linear-gradient(150deg,#a9c2ac,#6f8f77 75%); }
+  .swatch.g5{ background:linear-gradient(150deg,#cabfa9,#a2957c 75%); }
+  .swatch.g6{ background:linear-gradient(150deg,#efe6d2,#cfc09a 80%); }
+  .swatch.g6 .tag{ background:rgba(38,34,27,.55); }
+  .swatch.g7{ background:linear-gradient(150deg,#b6653f,#7c3a1e 75%); }
+
+  @media (min-width:640px){
+    .piece{ grid-column:span 3; }
+    .piece.feature{ grid-column:span 4; }
+    .piece.tall{ grid-column:span 2; }
+  }
+  @media (min-width:960px){
+    .piece{ grid-column:span 2; }
+    .piece.feature{ grid-column:span 3; }
+    .piece.tall{ grid-column:span 2; }
+    .piece.tall .swatch{ aspect-ratio:3/4; }
+    .piece.feature .swatch{ aspect-ratio:16/10; }
+  }
+
+  .gallery-note{
+    margin-top:var(--space-5); font-size:14px; color:var(--muted);
+    display:flex; align-items:center; gap:10px;
+  }
+  .gallery-note svg{ width:16px; height:16px; flex:none; }
+
+  /* ---------- About ---------- */
+  .about-section{
+    border-top:1px solid var(--line);
+    background:var(--bg-alt);
+  }
+  .about-grid{ display:grid; gap:var(--space-6); }
+  @media (min-width:960px){ .about-grid{ grid-template-columns:.85fr 1.15fr; } }
+
+  .about-visual-col{ padding-block: clamp(56px, 8vw, 96px) 0; }
+  @media (min-width:960px){ .about-visual-col{ position:sticky; top:84px; align-self:start; padding-block: clamp(56px, 8vw, 96px); } }
+  .about-visual{
+    aspect-ratio:3/4; border-radius:2px; position:relative; overflow:hidden;
+    background:
+      radial-gradient(90% 90% at 75% 20%, rgba(255,255,255,.10), transparent 60%),
+      linear-gradient(165deg,#c9b28d 0%, #9c8058 45%, #6d5334 100%);
+  }
+  .about-visual .rings{ position:absolute; inset:auto -18% -20% auto; width:74%; opacity:.32; color:#2c2216; }
+
+  .about-copy{ padding-block: clamp(56px, 8vw, 96px); }
+  .about-copy h2{
+    font-family:var(--font-display); font-weight:600;
+    font-size:clamp(30px, 4vw, 46px); margin:10px 0 var(--space-4); line-height:1.08;
+  }
+  .about-copy p{ max-width:58ch; color:var(--ink-soft); font-size:16.5px; margin:0 0 var(--space-3); }
+  .about-copy p strong{ color:var(--ink); font-weight:600; }
+  .about-stats{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-3);
+    margin-top:var(--space-5); padding-top:var(--space-4); border-top:1px solid var(--line-strong);
+    max-width:58ch;
+  }
+  .about-stats .num{ font-family:var(--font-display); font-size:32px; font-weight:600; color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+  .about-stats .label{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+  /* ---------- Process ---------- */
+  .process-section{ padding-block: clamp(72px, 9vw, 128px); }
+  .process-rail{
+    display:grid; gap:var(--space-4); margin-top:var(--space-6);
+  }
+  @media (min-width:840px){ .process-rail{ grid-template-columns:repeat(4,1fr); gap:var(--space-3); } }
+  .step{ position:relative; padding-top:var(--space-4); border-top:2px solid var(--line-strong); }
+  .step .num{
+    font-family:var(--font-display); font-style:italic; font-weight:600;
+    font-size:15px; color:var(--accent-strong); display:block; margin-bottom:10px;
+  }
+  .step h3{ font-family:var(--font-display); font-weight:600; font-size:22px; margin:0 0 8px; }
+  .step p{ font-size:14.5px; color:var(--ink-soft); margin:0; }
+
+  /* ---------- Commission ---------- */
+  .commission-section{
+    border-top:1px solid var(--line);
+    padding-block: clamp(72px, 9vw, 128px);
+  }
+  .commission-grid{ display:grid; gap:var(--space-6); }
+  @media (min-width:960px){ .commission-grid{ grid-template-columns:1fr 1fr; align-items:start; } }
+
+  .commission-copy h2{
+    font-family:var(--font-display); font-weight:600;
+    font-size:clamp(30px, 4vw, 46px); margin:10px 0 var(--space-3); line-height:1.08;
+  }
+  .commission-copy p{ color:var(--ink-soft); font-size:16px; max-width:48ch; margin:0 0 var(--space-4); }
+  .commission-list{ list-style:none; margin:0 0 var(--space-4); padding:0; display:grid; gap:12px; }
+  .commission-list li{ display:flex; gap:12px; font-size:14.5px; color:var(--ink-soft); align-items:flex-start; }
+  .commission-list svg{ width:18px; height:18px; flex:none; color:var(--accent-strong); margin-top:2px; }
+  .commission-list b{ color:var(--ink); }
+
+  .form-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:3px;
+    padding:var(--space-4);
+  }
+  .field{ margin-bottom:var(--space-3); }
+  .field label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; }
+  .field .hint{ font-size:12.5px; color:var(--muted); margin-top:5px; }
+  .field input, .field select, .field textarea{
+    width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+    background:var(--bg); border:1px solid var(--line-strong); border-radius:2px;
+    padding:12px 13px; min-height:48px;
+  }
+  .field textarea{ min-height:110px; resize:vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--accent-strong); outline-offset:1px; border-color:var(--accent-strong); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+  @media (max-width:480px){ .field-row{ grid-template-columns:1fr; } }
+
+  .form-submit{ width:100%; margin-top:6px; }
+  .form-submit:disabled{ opacity:.7; cursor:not-allowed; }
+
+  .success-card{
+    background:var(--surface); border:1px solid var(--line-strong); border-radius:3px;
+    padding:var(--space-5); text-align:center;
+  }
+  .success-card svg{ width:34px; height:34px; color:var(--accent-strong); margin:0 auto 14px; }
+  .success-card h3{ font-family:var(--font-display); font-size:24px; margin:0 0 8px; }
+  .success-card p{ color:var(--ink-soft); font-size:14.5px; margin:0; }
+
+  /* ---------- Footer ---------- */
+  .site-footer{
+    border-top:1px solid var(--line);
+    background:var(--ink); color:#f1ead9;
+    padding-block: var(--space-6) var(--space-4);
+  }
+  .footer-grid{
+    display:grid; gap:var(--space-5);
+  }
+  @media (min-width:760px){ .footer-grid{ grid-template-columns:1.3fr 1fr 1fr; } }
+  .footer-brand{ font-family:var(--font-display); font-size:24px; font-weight:600; }
+  .footer-brand .brand-amp{ color:#e08a5f; }
+  .footer-tag{ color:#c9c0ab; font-size:14px; max-width:34ch; margin-top:10px; }
+  .footer-col h4{ font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:#c9c0ab; margin:0 0 var(--space-2); }
+  .footer-col ul{ list-style:none; margin:0; padding:0; display:grid; gap:10px; font-size:14.5px; }
+  .footer-col a{ text-decoration:none; }
+  .footer-col a:hover{ text-decoration:underline; }
+  .footer-bottom{
+    margin-top:var(--space-6); padding-top:var(--space-3); border-top:1px solid rgba(255,255,255,.12);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px;
+    font-size:13px; color:#a89f89;
+  }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="rings-mark" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="94" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <circle cx="100" cy="100" r="50" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <circle cx="100" cy="100" r="28" fill="none" stroke="currentColor" stroke-width="1.4"/>
+  </symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24">
+    <path d="M4 12.5 9.5 18 20 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="icon-dot" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="4" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<header class="site-header">
+  <div class="container">
+    <div class="nav-row">
+      <a class="brand" href="#top">
+        <svg class="mark" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+        <span>Kiln <span class="brand-amp">&amp;</span> Tide</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+        <a href="#process">Process</a>
+        <a class="nav-cta" href="#commission">Commission a piece</a>
+      </nav>
+
+      <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="mobilePanel" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+
+    <div class="mobile-panel" id="mobilePanel">
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a href="#process">Process</a>
+      <a class="nav-cta" href="#commission">Commission a piece</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Independent pottery studio &middot; Cornwall, UK</span>
+          <h1>Clay shaped<br>by tide <em>and</em> fire.</h1>
+          <p class="lede">Wheel-thrown tableware and vessels, glazed in the colors of the sea. One studio, one wheel, small batches.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#work">View the gallery</a>
+            <a class="btn btn-ghost" href="#commission">Commission a piece</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" data-reveal>
+          <svg class="rings top" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+          <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+          <div class="caption">
+            <span>On the wheel this week</span>
+            <strong>Tide Pitcher</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATEMENT -->
+  <section class="statement">
+    <div class="container statement-inner" data-reveal>
+      <p>Every piece leaves the wheel a little uneven &mdash; that&rsquo;s how you know a hand made it, not a mould.</p>
+      <cite>Nia Faulkner, potter</cite>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="gallery-section" id="work">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div>
+          <span class="eyebrow">Selected work</span>
+          <h2>Recent pieces</h2>
+        </div>
+        <p class="sub">A rotating edit of what&rsquo;s currently on the shelf. Most pieces are one of one &mdash; once it&rsquo;s gone, the next isn&rsquo;t identical.</p>
+      </div>
+
+      <div class="gallery-grid">
+
+        <article class="piece feature" data-reveal>
+          <div class="swatch g1">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">In stock</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Tide Pitcher</h3>
+              <p class="meta">Stoneware &middot; reactive teal glaze &middot; H 24cm</p>
+            </div>
+            <p class="price">from &pound;95</p>
+          </div>
+        </article>
+
+        <article class="piece" data-reveal="1">
+          <div class="swatch g2">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">Set of 4</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Low Tide Bowls</h3>
+              <p class="meta">Sand-speckle glaze &middot; &Oslash; 14cm each</p>
+            </div>
+            <p class="price">&pound;145</p>
+          </div>
+        </article>
+
+        <article class="piece tall" data-reveal="2">
+          <div class="swatch g3">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">One of one</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Ebb Vase</h3>
+              <p class="meta">Matte charcoal &middot; H 32cm</p>
+            </div>
+            <p class="price">&pound;210</p>
+          </div>
+        </article>
+
+        <article class="piece" data-reveal>
+          <div class="swatch g4">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">In stock</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Rockpool Mug</h3>
+              <p class="meta">Celadon drip glaze &middot; H 9cm</p>
+            </div>
+            <p class="price">&pound;38</p>
+          </div>
+        </article>
+
+        <article class="piece feature" data-reveal="1">
+          <div class="swatch g5">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">Made to order</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Driftwood Platter</h3>
+              <p class="meta">Bare stoneware &middot; 38 &times; 24cm</p>
+            </div>
+            <p class="price">&pound;120</p>
+          </div>
+        </article>
+
+        <article class="piece" data-reveal="2">
+          <div class="swatch g6">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">In stock</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Salt Jar</h3>
+              <p class="meta">Cream crackle glaze &middot; H 20cm, lidded</p>
+            </div>
+            <p class="price">&pound;68</p>
+          </div>
+        </article>
+
+        <article class="piece" data-reveal>
+          <div class="swatch g7">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+            <span class="tag">Made to order</span>
+          </div>
+          <div class="info">
+            <div>
+              <h3>Anchor Bowl</h3>
+              <p class="meta">Clay-red glaze &middot; &Oslash; 16cm</p>
+            </div>
+            <p class="price">&pound;46</p>
+          </div>
+        </article>
+
+      </div>
+
+      <p class="gallery-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+        In-stock pieces ship within 5 working days. Made-to-order pieces are thrown after your inquiry.
+      </p>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about-section" id="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-visual-col" data-reveal>
+          <div class="about-visual">
+            <svg class="rings" viewBox="0 0 200 200" aria-hidden="true"><use href="#rings-mark"/></svg>
+          </div>
+        </div>
+
+        <div class="about-copy">
+          <span class="eyebrow">About the studio</span>
+          <h2>A single room, a few hundred metres from the sea</h2>
+          <p><strong>Kiln &amp; Tide</strong> is run by Nia Faulkner out of a converted net loft in Porthkerris, Cornwall. She trained at Falmouth, then spent three years assisting a production potter in Devon before setting up on her own in 2019.</p>
+          <p>Every piece is thrown, trimmed and glazed by hand, one at a time. The clay is a Cornish stoneware body; the glazes are mixed and tested in small batches, most of them named after conditions on the water that morning &mdash; low tide, storm swell, slack water.</p>
+          <p>There is one wheel, one kiln, and no assistants. That&rsquo;s a limit on how much gets made &mdash; and the reason nothing here looks machine-perfect.</p>
+
+          <div class="about-stats">
+            <div>
+              <div class="num">6yr</div>
+              <div class="label">Studio running since 2019</div>
+            </div>
+            <div>
+              <div class="num">1</div>
+              <div class="label">Potter, one wheel</div>
+            </div>
+            <div>
+              <div class="num">120&deg;C</div>
+              <div class="label">per hour, kiln ramp rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="process-section" id="process">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div>
+          <span class="eyebrow">How it&rsquo;s made</span>
+          <h2>From clay to kiln</h2>
+        </div>
+        <p class="sub">Four stages, roughly three weeks, depending on how the weather treats the drying racks.</p>
+      </div>
+
+      <div class="process-rail">
+        <div class="step" data-reveal>
+          <span class="num">01</span>
+          <h3>Wedge</h3>
+          <p>Cornish stoneware clay is wedged by hand to remove air and even out moisture before it touches the wheel.</p>
+        </div>
+        <div class="step" data-reveal="1">
+          <span class="num">02</span>
+          <h3>Throw</h3>
+          <p>Each form is thrown, then trimmed the next day once it&rsquo;s firmed up enough to hold a clean foot ring.</p>
+        </div>
+        <div class="step" data-reveal="2">
+          <span class="num">03</span>
+          <h3>Glaze</h3>
+          <p>Bisque-fired pieces are dipped or brushed in small-batch glazes, tested for how they pool and break over texture.</p>
+        </div>
+        <div class="step" data-reveal="3">
+          <span class="num">04</span>
+          <h3>Fire</h3>
+          <p>A slow 12-hour firing to 1,260&deg;C, then two days cooling in the kiln before anything comes out.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMISSION -->
+  <section class="commission-section" id="commission">
+    <div class="container">
+      <div class="commission-grid">
+        <div class="commission-copy" data-reveal>
+          <h2>Start a commission</h2>
+          <p>Most commissions are tableware sets, one-off vessels, or small runs for cafés and restaurants. Tell me what you need and I&rsquo;ll reply with a sketch, a price, and a realistic timeline.</p>
+
+          <ul class="commission-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg><span><b>Turnaround:</b> 4&ndash;6 weeks from confirmed brief to collection or shipping.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8h9.5a2.5 2.5 0 0 1 0 5H8a2.5 2.5 0 0 0 0 5H18"/></svg><span><b>Price range:</b> &pound;40 for a single mug up to &pound;450 for a large dinner set.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5"/></svg><span><b>What helps:</b> a rough sketch or reference photo, quantity, and any glaze colour you have in mind.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <form class="form-card" id="commissionForm" novalidate>
+            <div class="field">
+              <label for="c-name">Full name</label>
+              <input id="c-name" name="name" type="text" autocomplete="name" required>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="c-email">Email</label>
+                <input id="c-email" name="email" type="email" autocomplete="email" required>
+              </div>
+              <div class="field">
+                <label for="c-budget">Budget range</label>
+                <select id="c-budget" name="budget">
+                  <option value="under-100">Under &pound;100</option>
+                  <option value="100-250">&pound;100&ndash;&pound;250</option>
+                  <option value="250-450">&pound;250&ndash;&pound;450</option>
+                  <option value="450-plus">&pound;450+</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="c-details">Tell me about the piece</label>
+              <textarea id="c-details" name="details" required placeholder="e.g. a set of 6 side plates, sea-glass glaze, for a coastal café"></textarea>
+              <p class="hint">Quantity, use, colour, deadline &mdash; whatever you know so far.</p>
+            </div>
+            <button class="btn btn-primary form-submit" type="submit">Send inquiry</button>
+          </form>
+
+          <div class="success-card" id="commissionSuccess" role="status" tabindex="-1" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"/></svg>
+            <h3>Inquiry sent</h3>
+            <p>Thanks &mdash; I read every message myself and reply within 3 business days, usually with a sketch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">Kiln <span class="brand-amp">&amp;</span> Tide</div>
+        <p class="footer-tag">Wheel-thrown ceramics from a one-room studio in Porthkerris, Cornwall.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Studio</h4>
+        <ul>
+          <li><a href="#work">Gallery</a></li>
+          <li><a href="#about">About Nia</a></li>
+          <li><a href="#process">How it&rsquo;s made</a></li>
+          <li><a href="#commission">Commissions</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Visit &amp; contact</h4>
+        <ul>
+          <li>hello@kilnandtide.studio</li>
+          <li>Porthkerris, Cornwall, UK</li>
+          <li>Studio visits by appointment</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; 2026 Kiln &amp; Tide Pottery Studio.</span>
+      <span>All pieces handmade to order &mdash; expect natural variation.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var toggle = document.getElementById('navToggle');
+  var panel = document.getElementById('mobilePanel');
+
+  function closePanel(){
+    panel.classList.remove('is-open');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open menu');
+  }
+  function openPanel(){
+    panel.classList.add('is-open');
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', 'Close menu');
+  }
+
+  toggle.addEventListener('click', function(){
+    if (panel.classList.contains('is-open')) { closePanel(); } else { openPanel(); }
+  });
+  panel.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', closePanel);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closePanel();
+  });
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var revealEls = document.querySelectorAll('[data-reveal]');
+  if (reduceMotion || !('IntersectionObserver' in window)) {
+    revealEls.forEach(function(el){ el.classList.add('is-visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    revealEls.forEach(function(el){ io.observe(el); });
+  }
+
+  var form = document.getElementById('commissionForm');
+  var success = document.getElementById('commissionSuccess');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    var btn = form.querySelector('.form-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    window.setTimeout(function(){
+      form.hidden = true;
+      success.hidden = false;
+      success.focus();
+    }, 850);
+  });
+})();
+</script>
+
+</body>
+</html>

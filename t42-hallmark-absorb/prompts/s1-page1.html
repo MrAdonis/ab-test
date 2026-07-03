@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>账雀 Ledgerbird — 独立开发者的极简记账台</title>
+<style>
+  :root {
+    --ink: #1c2321;
+    --paper: #f7f5f0;
+    --moss: #3e5c50;
+    --moss-deep: #2c443a;
+    --amber: #c98a2d;
+    --line: #dcd7cc;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Source Han Sans SC", "PingFang SC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(247,245,240,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: .02em; }
+  .logo em { font-style: normal; color: var(--moss); }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; }
+  .nav-links a { color: var(--ink); text-decoration: none; opacity: .75; }
+  .nav-links a:hover { opacity: 1; }
+  .btn {
+    display: inline-block; padding: 10px 22px; border-radius: var(--radius);
+    background: var(--moss); color: #fff; text-decoration: none; font-size: 14px;
+    border: none; cursor: pointer;
+  }
+  .btn:hover { background: var(--moss-deep); }
+  .btn-ghost { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
+
+  .hero { text-align: center; padding: 96px 0 72px; }
+  .hero h1 { font-size: 44px; line-height: 1.25; letter-spacing: .01em; }
+  .hero h1 span { color: var(--moss); }
+  .hero p { max-width: 34em; margin: 20px auto 32px; font-size: 17px; opacity: .8; }
+  .hero .cta-row { display: flex; gap: 14px; justify-content: center; }
+  .hero .meta { margin-top: 18px; font-size: 13px; opacity: .55; }
+
+  .features { padding: 56px 0 80px; }
+  .features h2 { text-align: center; font-size: 28px; margin-bottom: 40px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 20px; }
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 28px 24px;
+  }
+  .card .mark {
+    font-family: "SF Mono", ui-monospace, monospace;
+    color: var(--amber); font-size: 13px; letter-spacing: .08em;
+  }
+  .card h3 { font-size: 18px; margin: 10px 0 8px; }
+  .card p { font-size: 14px; opacity: .75; }
+
+  .quote { background: var(--moss-deep); color: #f2efe7; padding: 64px 0; }
+  .quote blockquote { max-width: 40em; margin: 0 auto; text-align: center; font-size: 20px; line-height: 1.8; }
+  .quote cite { display: block; margin-top: 16px; font-size: 13px; font-style: normal; opacity: .65; }
+
+  .cta-band { text-align: center; padding: 88px 0; }
+  .cta-band h2 { font-size: 30px; margin-bottom: 12px; }
+  .cta-band p { opacity: .7; margin-bottom: 28px; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0; font-size: 13px; opacity: .6; }
+  footer .wrap { display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="logo">账雀 <em>Ledgerbird</em></div>
+    <nav class="nav-links">
+      <a href="#">功能</a><a href="#">定价</a><a href="#">更新日志</a><a href="#">文档</a>
+    </nav>
+    <a class="btn" href="#">免费开始</a>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <h1>给独立开发者的<span>极简记账台</span></h1>
+  <p>收入渠道散在 Stripe、App Store、Gumroad 和三张银行卡里？账雀把它们自动汇到一张表，报税季不再翻邮件。</p>
+  <div class="cta-row">
+    <a class="btn" href="#">免费开始</a>
+    <a class="btn btn-ghost" href="#">看 90 秒演示</a>
+  </div>
+  <div class="meta">免费版永久可用 · 无需信用卡</div>
+</section>
+
+<section class="features wrap">
+  <h2>三件事，只做这三件</h2>
+  <div class="grid3">
+    <div class="card">
+      <div class="mark">01 / SYNC</div>
+      <h3>渠道自动同步</h3>
+      <p>连接 Stripe、App Store Connect、Gumroad，交易记录每小时自动入账，手工只补现金流水。</p>
+    </div>
+    <div class="card">
+      <div class="mark">02 / TAG</div>
+      <h3>一键归类</h3>
+      <p>按项目、按客户、按订阅周期打标签，规则学习你的习惯，第二个月基本不用碰。</p>
+    </div>
+    <div class="card">
+      <div class="mark">03 / EXPORT</div>
+      <h3>报税直出</h3>
+      <p>季度汇总一键导出给会计的格式，含渠道手续费拆分，不用再对着 CSV 皱眉。</p>
+    </div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="wrap">
+    <blockquote>
+      "以前每个季度花一整天对账，现在打开账雀截个图发给会计就完事了。"
+      <cite>—— 王砚舟，独立 iOS 开发者，三款付费 App</cite>
+    </blockquote>
+  </div>
+</section>
+
+<section class="cta-band wrap">
+  <h2>把对账的那一天拿回来</h2>
+  <p>五分钟接好第一个渠道，本月的账已经在表里了。</p>
+  <a class="btn" href="#">免费开始</a>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 账雀 Ledgerbird</span>
+    <span>隐私 · 条款 · status.ledgerbird.app</span>
+  </div>
+</footer>
+</body>
+</html>

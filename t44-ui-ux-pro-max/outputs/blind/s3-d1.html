@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>车队实时监控 · 调度控制台</title>
+<style>
+  :root{
+    --bg:#0a0f1a;
+    --bg-raised:#0e1524;
+    --bg-row-hover:#131b2c;
+    --border:#1c2537;
+    --border-strong:#28334a;
+    --text:#e4e9f2;
+    --text-muted:#8994ab;
+    --text-dim:#5b6478;
+
+    --blue:#3b82f6;      /* 在途-正常 */
+    --blue-dim:#1d3a63;
+    --green:#22c55e;     /* 已完成/正常 */
+    --green-dim:#153b26;
+    --amber:#f59e0b;     /* 延误/预警 */
+    --amber-dim:#4a350f;
+    --red:#ef4444;       /* 异常/故障 */
+    --red-dim:#4a1717;
+    --gray:#64748b;       /* 离线 */
+    --gray-dim:#262e3e;
+
+    --radius:6px;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-sans);
+    font-size:13px;
+    line-height:1.4;
+    min-height:100dvh;
+  }
+  ::selection{background:var(--blue-dim);color:var(--text);}
+
+  button{font-family:inherit;font-size:inherit;color:inherit;}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
+
+  /* ---------- 焦点态 ---------- */
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--blue);
+    outline-offset:2px;
+    border-radius:4px;
+  }
+
+  /* ---------- 顶部栏 ---------- */
+  .topbar{
+    height:52px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 20px;
+    border-bottom:1px solid var(--border);
+    background:var(--bg-raised);
+  }
+  .topbar-left{display:flex;align-items:center;gap:12px;}
+  .brand{
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:.2px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand svg{flex-shrink:0;}
+  .brand-sub{color:var(--text-dim);font-weight:400;font-size:12px;padding-left:12px;border-left:1px solid var(--border-strong);}
+
+  .topbar-right{display:flex;align-items:center;gap:18px;}
+  .sync-indicator{
+    display:flex;align-items:center;gap:7px;
+    font-size:12px;color:var(--text-muted);
+  }
+  .sync-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 3px var(--green-dim);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.45;}
+  }
+  .clock{font-family:var(--font-mono);font-size:12px;color:var(--text-muted);}
+
+  /* ---------- KPI 条：无卡片，纯分栏 + 上边框 ---------- */
+  .kpi-strip{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    border-top:1px solid var(--border-strong);
+    border-bottom:1px solid var(--border);
+    background:var(--bg-raised);
+  }
+  .kpi{
+    padding:14px 20px;
+    border-left:1px solid var(--border);
+  }
+  .kpi:first-child{border-left:none;}
+  .kpi-label{
+    font-size:11px;
+    color:var(--text-dim);
+    display:flex;align-items:center;gap:6px;
+    margin-bottom:6px;
+  }
+  .kpi-value{
+    font-family:var(--font-mono);
+    font-size:26px;
+    font-weight:600;
+    line-height:1;
+  }
+  .kpi-value .unit{font-size:14px;font-weight:400;color:var(--text-muted);margin-left:2px;}
+  .kpi-delta{
+    margin-top:6px;
+    font-size:11px;
+    display:flex;align-items:center;gap:4px;
+  }
+  .kpi-delta.up{color:var(--green);}
+  .kpi-delta.down{color:var(--red);}
+  .kpi-delta.flat{color:var(--text-dim);}
+
+  /* ---------- 主体布局 ---------- */
+  .main{
+    display:grid;
+    grid-template-columns:1fr 340px;
+    gap:0;
+    align-items:start;
+  }
+  @media (max-width:1080px){
+    .main{grid-template-columns:1fr;}
+    .alert-col{border-left:none;border-top:1px solid var(--border);}
+  }
+
+  /* ---------- 车辆列表区 ---------- */
+  .panel-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px 10px;
+  }
+  .panel-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .panel-title .count{
+    font-family:var(--font-mono);
+    color:var(--text-dim);
+    font-weight:400;
+    font-size:12px;
+  }
+
+  .filters{
+    display:flex;gap:6px;
+    padding:0 20px 12px;
+    flex-wrap:wrap;
+  }
+  .chip{
+    padding:5px 11px;
+    border:1px solid var(--border-strong);
+    border-radius:100px;
+    background:transparent;
+    color:var(--text-muted);
+    cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+    transition:border-color .15s ease-out,color .15s ease-out,background-color .15s ease-out;
+  }
+  .chip:hover{color:var(--text);border-color:var(--text-dim);}
+  .chip.active{
+    background:var(--blue-dim);
+    border-color:var(--blue);
+    color:var(--text);
+  }
+  .chip .dot{width:6px;height:6px;border-radius:50%;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+  }
+  thead th{
+    position:sticky;top:0;
+    text-align:left;
+    font-size:11px;
+    font-weight:600;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    padding:8px 12px;
+    border-top:1px solid var(--border-strong);
+    border-bottom:1px solid var(--border-strong);
+    background:var(--bg-raised);
+    white-space:nowrap;
+  }
+  tbody tr{
+    border-bottom:1px solid var(--border);
+    transition:background-color .1s ease-out;
+  }
+  tbody tr:hover{background:var(--bg-row-hover);}
+  tbody td{
+    padding:9px 12px;
+    vertical-align:middle;
+    white-space:nowrap;
+  }
+  td.num{font-family:var(--font-mono);text-align:right;}
+  td.veh{
+    display:flex;flex-direction:column;gap:1px;
+    padding-top:8px;padding-bottom:8px;
+  }
+  .veh-plate{font-weight:600;font-size:13px;}
+  .veh-driver{font-size:11px;color:var(--text-dim);}
+
+  .status-cell{display:flex;align-items:center;gap:7px;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .status-label{font-size:12.5px;}
+
+  .status-transit .status-dot{background:var(--blue);box-shadow:0 0 0 2.5px var(--blue-dim);}
+  .status-transit .status-label{color:#a8c6f8;}
+  .status-delay .status-dot{background:var(--amber);box-shadow:0 0 0 2.5px var(--amber-dim);}
+  .status-delay .status-label{color:#f3ca82;}
+  .status-alert .status-dot{background:var(--red);box-shadow:0 0 0 2.5px var(--red-dim);}
+  .status-alert .status-label{color:#f5a3a3;}
+  .status-done .status-dot{background:var(--green);box-shadow:0 0 0 2.5px var(--green-dim);}
+  .status-done .status-label{color:#8fdca9;}
+  .status-offline .status-dot{background:var(--gray);}
+  .status-offline .status-label{color:var(--text-dim);}
+
+  .loc-main{font-size:12.5px;}
+  .loc-sub{font-size:11px;color:var(--text-dim);}
+
+  .flag-none{color:var(--text-dim);font-size:12px;}
+  .flag-warn{
+    display:inline-flex;align-items:center;gap:4px;
+    color:#f3ca82;font-size:12px;
+  }
+  .flag-crit{
+    display:inline-flex;align-items:center;gap:4px;
+    color:#f5a3a3;font-size:12px;font-weight:600;
+  }
+
+  .row-action{
+    opacity:0;
+    background:transparent;
+    border:1px solid var(--border-strong);
+    border-radius:4px;
+    padding:4px 9px;
+    color:var(--text-muted);
+    cursor:pointer;
+    transition:opacity .1s ease-out,border-color .15s ease-out,color .15s ease-out;
+  }
+  tr:hover .row-action,
+  .row-action:focus-visible{
+    opacity:1;
+  }
+  .row-action:hover{color:var(--text);border-color:var(--blue);}
+  .row-action:active{transform:scale(.97);}
+
+  /* ---------- 告警流侧栏 ---------- */
+  .alert-col{
+    border-left:1px solid var(--border);
+    min-height:100%;
+  }
+  .alert-list{
+    display:flex;flex-direction:column;
+    padding:0 16px 16px;
+    gap:0;
+  }
+  .alert-item{
+    padding:11px 4px;
+    border-bottom:1px solid var(--border);
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .alert-item:last-child{border-bottom:none;}
+  .alert-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .alert-level{
+    font-size:10.5px;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:3px;
+    letter-spacing:.03em;
+  }
+  .level-critical{background:var(--red-dim);color:#f5a3a3;}
+  .level-warning{background:var(--amber-dim);color:#f3ca82;}
+  .level-info{background:var(--blue-dim);color:#a8c6f8;}
+  .alert-time{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);}
+  .alert-body{font-size:12.5px;color:var(--text);}
+  .alert-veh{font-size:11px;color:var(--text-dim);}
+  .alert-actions{display:flex;gap:6px;margin-top:2px;}
+  .ack-btn{
+    background:transparent;border:1px solid var(--border-strong);
+    border-radius:4px;padding:3px 9px;font-size:11px;
+    color:var(--text-muted);cursor:pointer;
+    transition:border-color .15s ease-out,color .15s ease-out;
+  }
+  .ack-btn:hover{color:var(--text);border-color:var(--green);}
+
+  .alert-item.is-new{
+    animation:alertIn .3s ease-out;
+    background:linear-gradient(90deg,var(--red-dim),transparent 40%);
+  }
+  @keyframes alertIn{
+    from{opacity:0;transform:translateY(-4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .sync-dot,.alert-item.is-new{animation:none;}
+    tbody tr, .row-action, .chip, .ack-btn{transition:none;}
+  }
+
+  .scrollarea{max-height:calc(100dvh - 52px - 74px);overflow:auto;}
+
+  .legend{
+    display:flex;gap:16px;flex-wrap:wrap;
+    padding:10px 20px;
+    border-top:1px solid var(--border);
+    font-size:11px;color:var(--text-dim);
+  }
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend .status-dot{width:6px;height:6px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="brand">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="1" y="6" width="15" height="10" rx="1.5"></rect>
+        <path d="M16 9h4l3 3v4h-7z"></path>
+        <circle cx="6" cy="18.5" r="1.8"></circle>
+        <circle cx="18.5" cy="18.5" r="1.8"></circle>
+      </svg>
+      车队实时监控
+      <span class="brand-sub">调度控制台</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-indicator">
+      <span class="sync-dot" aria-hidden="true"></span>
+      实时同步中
+    </div>
+    <div class="clock tnum" id="clock">2026-07-03 14:32:07</div>
+  </div>
+</header>
+
+<section class="kpi-strip" aria-label="关键指标">
+  <div class="kpi">
+    <div class="kpi-label">准点率</div>
+    <div class="kpi-value tnum">96.4<span class="unit">%</span></div>
+    <div class="kpi-delta up">▲ 1.2% 环比昨日</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">在途车辆</div>
+    <div class="kpi-value tnum">128<span class="unit">辆</span></div>
+    <div class="kpi-delta flat">与昨日持平</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">异常车辆</div>
+    <div class="kpi-value tnum" style="color:var(--red);">5<span class="unit">辆</span></div>
+    <div class="kpi-delta down">▲ 2 辆需处理</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">今日已完成</div>
+    <div class="kpi-value tnum">342<span class="unit">单</span></div>
+    <div class="kpi-delta up">▲ 18 单 较昨日同期</div>
+  </div>
+</section>
+
+<div class="main">
+
+  <section aria-label="在途车辆列表">
+    <div class="panel-head">
+      <div class="panel-title">在途车辆 <span class="count tnum">156 辆</span></div>
+    </div>
+    <div class="filters" role="group" aria-label="按状态筛选">
+      <button class="chip active" type="button">全部 156</button>
+      <button class="chip" type="button"><span class="dot" style="background:var(--blue);"></span>在途 128</button>
+      <button class="chip" type="button"><span class="dot" style="background:var(--amber);"></span>延误 14</button>
+      <button class="chip" type="button"><span class="dot" style="background:var(--red);"></span>异常 5</button>
+      <button class="chip" type="button"><span class="dot" style="background:var(--gray);"></span>离线 3</button>
+      <button class="chip" type="button"><span class="dot" style="background:var(--green);"></span>已完成 6</button>
+    </div>
+
+    <div class="scrollarea">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px;">车辆 / 司机</th>
+          <th style="width:110px;">状态</th>
+          <th>当前位置</th>
+          <th>目的地</th>
+          <th style="width:70px;">ETA</th>
+          <th style="width:80px;">里程</th>
+          <th style="width:70px;">车速</th>
+          <th style="width:130px;">异常</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤B·A2317</span><span class="veh-driver">陈志明</span></td>
+          <td><span class="status-cell status-transit"><span class="status-dot"></span><span class="status-label">在途</span></span></td>
+          <td><div class="loc-main">佛山市南海区桂城</div><div class="loc-sub">G4广清高速 K48</div></td>
+          <td>东莞市松山湖仓库</td>
+          <td class="num tnum">45 分</td>
+          <td class="num tnum">128 km</td>
+          <td class="num tnum">82 km/h</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤A·F8821</span><span class="veh-driver">李文博</span></td>
+          <td><span class="status-cell status-alert"><span class="status-dot"></span><span class="status-label">异常</span></span></td>
+          <td><div class="loc-main">广州市黄埔区科学城</div><div class="loc-sub">开泰大道路边</div></td>
+          <td>深圳市龙岗物流园</td>
+          <td class="num tnum">—</td>
+          <td class="num tnum">67 km</td>
+          <td class="num tnum">0 km/h</td>
+          <td><span class="flag-crit">⛔ 发动机故障停车</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤C·T0056</span><span class="veh-driver">王海涛</span></td>
+          <td><span class="status-cell status-delay"><span class="status-dot"></span><span class="status-label">延误</span></span></td>
+          <td><div class="loc-main">惠州市惠城区</div><div class="loc-sub">莞惠高速 K21 拥堵</div></td>
+          <td>惠州仲恺配送中心</td>
+          <td class="num tnum">72 分</td>
+          <td class="num tnum">34 km</td>
+          <td class="num tnum">18 km/h</td>
+          <td><span class="flag-warn">⚠ 路段拥堵</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤B·G6612</span><span class="veh-driver">周建国</span></td>
+          <td><span class="status-cell status-transit"><span class="status-dot"></span><span class="status-label">在途</span></span></td>
+          <td><div class="loc-main">深圳市宝安区福永</div><div class="loc-sub">机荷高速 K12</div></td>
+          <td>深圳宝安国际机场货运区</td>
+          <td class="num tnum">22 分</td>
+          <td class="num tnum">15 km</td>
+          <td class="num tnum">76 km/h</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤S·H3390</span><span class="veh-driver">赵丽娟</span></td>
+          <td><span class="status-cell status-offline"><span class="status-dot"></span><span class="status-label">离线</span></span></td>
+          <td><div class="loc-main">末次定位：中山市火炬区</div><div class="loc-sub">信号丢失 26 分钟</div></td>
+          <td>珠海高栏港仓库</td>
+          <td class="num tnum">—</td>
+          <td class="num tnum">89 km</td>
+          <td class="num tnum">—</td>
+          <td><span class="flag-warn">⚠ GPS 信号中断</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤B·K7745</span><span class="veh-driver">孙振宇</span></td>
+          <td><span class="status-cell status-transit"><span class="status-dot"></span><span class="status-label">在途</span></span></td>
+          <td><div class="loc-main">东莞市厚街镇</div><div class="loc-sub">莞太路辅道</div></td>
+          <td>东莞虎门港冷链仓</td>
+          <td class="num tnum">38 分</td>
+          <td class="num tnum">22 km</td>
+          <td class="num tnum">54 km/h</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤A·D1129</span><span class="veh-driver">吴海燕</span></td>
+          <td><span class="status-cell status-done"><span class="status-dot"></span><span class="status-label">已完成</span></span></td>
+          <td><div class="loc-main">广州市白云区江高</div><div class="loc-sub">已签收</div></td>
+          <td>广州白云集散中心</td>
+          <td class="num tnum">已到达</td>
+          <td class="num tnum">51 km</td>
+          <td class="num tnum">—</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤C·M4478</span><span class="veh-driver">林俊杰</span></td>
+          <td><span class="status-cell status-delay"><span class="status-dot"></span><span class="status-label">延误</span></span></td>
+          <td><div class="loc-main">河源市源城区</div><div class="loc-sub">京港澳高速 K901</div></td>
+          <td>河源高新区分拨点</td>
+          <td class="num tnum">55 分</td>
+          <td class="num tnum">96 km</td>
+          <td class="num tnum">61 km/h</td>
+          <td><span class="flag-warn">⚠ 出发延迟 40 分</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤B·N5501</span><span class="veh-driver">郑小刚</span></td>
+          <td><span class="status-cell status-transit"><span class="status-dot"></span><span class="status-label">在途</span></span></td>
+          <td><div class="loc-main">佛山市顺德区容桂</div><div class="loc-sub">佛山一环 K33</div></td>
+          <td>佛山顺德冷链中心</td>
+          <td class="num tnum">31 分</td>
+          <td class="num tnum">27 km</td>
+          <td class="num tnum">88 km/h</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤A·P2260</span><span class="veh-driver">黄志强</span></td>
+          <td><span class="status-cell status-alert"><span class="status-dot"></span><span class="status-label">异常</span></span></td>
+          <td><div class="loc-main">广州市番禺区南村</div><div class="loc-sub">番禺大道服务区</div></td>
+          <td>广州南沙保税仓</td>
+          <td class="num tnum">—</td>
+          <td class="num tnum">41 km</td>
+          <td class="num tnum">0 km/h</td>
+          <td><span class="flag-crit">⛔ 冷链温度超限 (-2℃→6℃)</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤C·Q8834</span><span class="veh-driver">徐美玲</span></td>
+          <td><span class="status-cell status-transit"><span class="status-dot"></span><span class="status-label">在途</span></span></td>
+          <td><div class="loc-main">江门市蓬江区</div><div class="loc-sub">江鹤高速 K16</div></td>
+          <td>江门新会分拨中心</td>
+          <td class="num tnum">27 分</td>
+          <td class="num tnum">19 km</td>
+          <td class="num tnum">79 km/h</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+        <tr>
+          <td class="veh"><span class="veh-plate">粤B·R9012</span><span class="veh-driver">刘晓东</span></td>
+          <td><span class="status-cell status-done"><span class="status-dot"></span><span class="status-label">已完成</span></span></td>
+          <td><div class="loc-main">深圳市南山区蛇口</div><div class="loc-sub">已签收</div></td>
+          <td>深圳蛇口港集散点</td>
+          <td class="num tnum">已到达</td>
+          <td class="num tnum">63 km</td>
+          <td class="num tnum">—</td>
+          <td><span class="flag-none">— 无</span></td>
+          <td><button class="row-action" type="button">详情</button></td>
+        </tr>
+
+      </tbody>
+    </table>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="status-dot" style="background:var(--blue);"></i>在途</span>
+      <span><i class="status-dot" style="background:var(--amber);"></i>延误/预警</span>
+      <span><i class="status-dot" style="background:var(--red);"></i>异常/故障</span>
+      <span><i class="status-dot" style="background:var(--gray);"></i>离线</span>
+      <span><i class="status-dot" style="background:var(--green);"></i>已完成</span>
+    </div>
+  </section>
+
+  <aside class="alert-col" aria-label="告警流">
+    <div class="panel-head">
+      <div class="panel-title">告警流 <span class="count tnum">9 条</span></div>
+    </div>
+    <div class="scrollarea">
+    <div class="alert-list">
+
+      <div class="alert-item is-new">
+        <div class="alert-top">
+          <span class="alert-level level-critical">紧急</span>
+          <span class="alert-time tnum">14:31:52</span>
+        </div>
+        <div class="alert-body">粤A·P2260 冷链车厢温度超限，当前 6℃（阈值 -2℃）</div>
+        <div class="alert-veh">番禺大道服务区 · 司机 黄志强</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+          <button class="ack-btn" type="button">拨打司机</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-critical">紧急</span>
+          <span class="alert-time tnum">14:18:07</span>
+        </div>
+        <div class="alert-body">粤A·F8821 发动机故障灯亮起，车辆已停靠路边</div>
+        <div class="alert-veh">开泰大道 · 司机 李文博</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+          <button class="ack-btn" type="button">派救援</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-warning">警告</span>
+          <span class="alert-time tnum">14:05:33</span>
+        </div>
+        <div class="alert-body">粤S·H3390 GPS 信号中断已超过 25 分钟</div>
+        <div class="alert-veh">末次定位：中山市火炬区 · 司机 赵丽娟</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-warning">警告</span>
+          <span class="alert-time tnum">13:52:14</span>
+        </div>
+        <div class="alert-body">粤C·M4478 出发延迟 40 分钟，预计影响 ETA</div>
+        <div class="alert-veh">河源分拨点 · 司机 林俊杰</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-info">提示</span>
+          <span class="alert-time tnum">13:47:02</span>
+        </div>
+        <div class="alert-body">粤B·A2317 进入 G4 广清高速拥堵路段，预计延误 8 分钟</div>
+        <div class="alert-veh">佛山南海区桂城 · 司机 陈志明</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">已知悉</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-warning">警告</span>
+          <span class="alert-time tnum">13:30:41</span>
+        </div>
+        <div class="alert-body">粤C·T0056 莞惠高速 K21 拥堵，车速降至 18 km/h</div>
+        <div class="alert-veh">惠州惠城区 · 司机 王海涛</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-info">提示</span>
+          <span class="alert-time tnum">13:12:19</span>
+        </div>
+        <div class="alert-body">粤B·R9012 已签收，本单准点完成</div>
+        <div class="alert-veh">深圳蛇口港集散点 · 司机 刘晓东</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">已知悉</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-info">提示</span>
+          <span class="alert-time tnum">12:58:45</span>
+        </div>
+        <div class="alert-body">粤A·D1129 已签收，本单准点完成</div>
+        <div class="alert-veh">广州白云集散中心 · 司机 吴海燕</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">已知悉</button>
+        </div>
+      </div>
+
+      <div class="alert-item">
+        <div class="alert-top">
+          <span class="alert-level level-warning">警告</span>
+          <span class="alert-time tnum">12:41:08</span>
+        </div>
+        <div class="alert-body">粤B·N5501 胎压传感器读数偏低，建议下一站检查</div>
+        <div class="alert-veh">佛山一环 K33 · 司机 郑小刚</div>
+        <div class="alert-actions">
+          <button class="ack-btn" type="button">确认处理</button>
+        </div>
+      </div>
+
+    </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  // 模拟时钟走动（纯展示，不影响数据真实性判断）
+  function pad(n){return String(n).padStart(2,'0');}
+  function tick(){
+    var d = new Date(2026,6,3,14,32,7 + Math.floor((Date.now()/1000)%600));
+    var s = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+    var el = document.getElementById('clock');
+    if(el) el.textContent = s;
+  }
+  tick();
+  setInterval(tick, 1000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-billing="monthly">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>定价 — 账雀 Ledgerbird</title>
+<meta name="description" content="账雀 Ledgerbird 定价：免费版、独立版 ¥29/月、工作室版 ¥79/月，按年付立省15%。">
+<style>
+  :root {
+    --ink: #1c2321;
+    --paper: #f7f5f0;
+    --moss: #3e5c50;
+    --moss-deep: #2c443a;
+    --amber: #c98a2d;
+    --line: #dcd7cc;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Source Han Sans SC", "PingFang SC", "Noto Sans SC", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  h1, h2 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--moss);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ---- header (品牌一致，沿用首页) ---- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(247,245,240,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: .02em; }
+  .logo em { font-style: normal; color: var(--moss); }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; }
+  .nav-links a { color: var(--ink); text-decoration: none; opacity: .75; transition: opacity .15s ease-out; }
+  .nav-links a:hover { opacity: 1; }
+  .nav-links a[aria-current="page"] { opacity: 1; color: var(--moss); font-weight: 600; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 10px 24px; border-radius: var(--radius);
+    background: var(--moss); color: #fff; text-decoration: none; font-size: 14px; font-weight: 500;
+    border: none; cursor: pointer; transition: background .15s ease-out, transform .1s ease-out;
+  }
+  .btn:hover { background: var(--moss-deep); }
+  .btn:active { transform: translateY(1px); }
+  .btn-ghost { background: transparent; color: var(--moss); border: 1px solid var(--moss); }
+  .btn-ghost:hover { background: rgba(62,92,80,.06); }
+  .btn-block { width: 100%; }
+
+  /* ---- hero：非对称分屏，标题 + 计费切换 ---- */
+  .hero { padding: 88px 0 64px; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 56px; align-items: end;
+  }
+  .eyebrow {
+    display: inline-block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--moss); font-weight: 600; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: 40px; line-height: 1.25; letter-spacing: .01em; }
+  .hero h1 span { color: var(--moss); }
+  .hero-sub { max-width: 30em; margin-top: 16px; font-size: 16px; opacity: .78; }
+
+  .billing-card {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px;
+  }
+  .billing-card p { font-size: 13px; opacity: .65; margin-bottom: 12px; }
+  .billing-toggle {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px;
+  }
+  .toggle-option {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; border: none; border-radius: 7px; background: transparent;
+    font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer;
+    transition: background .15s ease-out, color .15s ease-out;
+  }
+  .toggle-option.is-active { background: var(--moss); color: #fff; }
+  .save-badge {
+    font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 5px;
+    background: var(--amber); color: var(--ink);
+  }
+  .toggle-option.is-active .save-badge { background: #fff; color: var(--moss-deep); }
+
+  /* ---- pricing cards：中间档抬高，打破整齐对称 ---- */
+  .pricing { padding: 24px 0 88px; }
+  .plan-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 20px;
+    align-items: start;
+  }
+  .plan {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 32px 26px; display: flex; flex-direction: column;
+    transition: transform .2s ease-out, box-shadow .2s ease-out;
+  }
+  .plan--featured {
+    border-color: var(--moss); transform: translateY(-14px);
+    box-shadow: 0 24px 44px -16px rgba(44,68,58,.32);
+    position: relative;
+  }
+  .plan-badge {
+    position: absolute; top: -13px; left: 26px;
+    background: var(--amber); color: var(--ink);
+    font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+  }
+  .plan-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .plan-desc { font-size: 13px; opacity: .65; margin-bottom: 20px; }
+  .plan-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px; min-height: 44px; }
+  .plan-price .amount { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .plan-price .period { font-size: 14px; opacity: .6; }
+  .plan-price-note { font-size: 12px; color: var(--moss); font-variant-numeric: tabular-nums; margin-bottom: 20px; min-height: 16px; }
+  .plan-price-note:empty { margin-bottom: 0; }
+  .plan-free-note { font-size: 12px; opacity: .55; margin-bottom: 20px; }
+  .plan-features { list-style: none; margin-bottom: 28px; flex-grow: 1; }
+  .plan-features li {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 14px; padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+  .plan-features li:first-child { border-top: none; }
+  .plan-features li::before {
+    content: "✓"; color: var(--moss); font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+
+  [data-billing="monthly"] .annual-only { display: none; }
+  [data-billing="annual"] .monthly-only { display: none; }
+
+  /* ---- 功能对比条：border-t / divide-y，非卡片 ---- */
+  .compare { padding: 8px 0 88px; }
+  .compare h2 { font-size: 24px; margin-bottom: 6px; }
+  .compare .section-sub { font-size: 14px; opacity: .65; margin-bottom: 32px; }
+  .compare-table { border-top: 1px solid var(--line); }
+  .compare-row {
+    display: grid; grid-template-columns: 1.6fr repeat(3, 1fr);
+    border-bottom: 1px solid var(--line); padding: 14px 0; font-size: 14px;
+  }
+  .compare-row.is-header { font-weight: 700; font-size: 13px; padding-bottom: 16px; }
+  .compare-row.is-header .compare-cell:not(:first-child) { color: var(--moss); }
+  .compare-cell { text-align: center; font-variant-numeric: tabular-nums; }
+  .compare-cell:first-child { text-align: left; opacity: .85; }
+  .compare-cell .yes { color: var(--moss); font-weight: 700; }
+  .compare-cell .no { opacity: .35; }
+
+  /* ---- FAQ：原生 accordion，与前两种布局家族不同 ---- */
+  .faq { padding: 8px 0 88px; }
+  .faq h2 { font-size: 24px; margin-bottom: 32px; }
+  .faq-list { max-width: 44em; }
+  .faq-item {
+    border-top: 1px solid var(--line);
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-item summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 20px 0; cursor: pointer; font-size: 15px; font-weight: 600; list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: "+"; font-size: 20px; font-weight: 400; color: var(--moss); flex-shrink: 0;
+    transition: transform .2s ease-out;
+  }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { font-size: 14px; opacity: .78; padding-bottom: 20px; max-width: 40em; }
+
+  /* ---- CTA band ---- */
+  .cta-band { text-align: center; padding: 84px 0; background: var(--moss-deep); color: #f2efe7; }
+  .cta-band h2 { font-size: 28px; margin-bottom: 12px; }
+  .cta-band p { opacity: .75; margin-bottom: 28px; }
+  .cta-band .btn { background: var(--amber); color: var(--ink); font-weight: 600; }
+  .cta-band .btn:hover { background: #dba03f; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 0; font-size: 13px; opacity: .6; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  footer a { color: inherit; }
+
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .plan-grid { grid-template-columns: 1fr; }
+    .plan--featured { transform: none; }
+    .compare-row { grid-template-columns: 1.4fr repeat(3, 1fr); font-size: 12px; }
+  }
+
+  @media (max-width: 520px) {
+    .hero h1 { font-size: 30px; }
+    .compare-row { grid-template-columns: 1fr; gap: 4px; padding: 14px 0; }
+    .compare-row .compare-cell:not(:first-child) { text-align: left; }
+    .compare-row.is-header { display: none; }
+    .compare-cell:not(:first-child)::before { content: attr(data-label) "："; opacity: .5; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="logo">账雀 <em>Ledgerbird</em></div>
+    <nav class="nav-links">
+      <a href="#">功能</a>
+      <a href="#" aria-current="page">定价</a>
+      <a href="#">更新日志</a>
+      <a href="#">文档</a>
+    </nav>
+    <a class="btn" href="#">免费开始</a>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">定价</span>
+      <h1>价格和记账一样<span>简单</span></h1>
+      <p class="hero-sub">三档方案，按渠道数量和协作需求区分。免费版永久可用，升级降级随时生效，不锁合同。</p>
+    </div>
+    <div class="billing-card">
+      <p>选择计费周期</p>
+      <div class="billing-toggle" role="group" aria-label="计费周期">
+        <button type="button" class="toggle-option is-active" data-billing="monthly" aria-pressed="true">按月付</button>
+        <button type="button" class="toggle-option" data-billing="annual" aria-pressed="false">
+          按年付 <span class="save-badge">省15%</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing wrap">
+  <div class="plan-grid">
+
+    <div class="plan">
+      <div class="plan-name">免费版</div>
+      <div class="plan-desc">先试试水，验证记账习惯</div>
+      <div class="plan-price"><span class="amount">¥0</span></div>
+      <div class="plan-free-note">永久免费 · 无需信用卡</div>
+      <ul class="plan-features">
+        <li>1 个渠道接入</li>
+        <li>手工记账</li>
+        <li>基础月度汇总</li>
+        <li>社区文档支持</li>
+      </ul>
+      <a class="btn btn-ghost btn-block" href="#">免费开始</a>
+    </div>
+
+    <div class="plan plan--featured">
+      <span class="plan-badge">最多人选</span>
+      <div class="plan-name">独立版</div>
+      <div class="plan-desc">2 个以上收入渠道就该升级</div>
+      <div class="plan-price">
+        <span class="amount monthly-only">¥29</span><span class="period monthly-only">/ 月</span>
+        <span class="amount annual-only">¥25</span><span class="period annual-only">/ 月</span>
+      </div>
+      <div class="plan-price-note annual-only">按年付 ¥296，一次结清</div>
+      <div class="plan-price-note monthly-only">&nbsp;</div>
+      <ul class="plan-features">
+        <li>最多 5 个渠道</li>
+        <li>自动同步（每小时）</li>
+        <li>一键归类规则</li>
+        <li>报税季一键导出</li>
+        <li>邮件工单支持（24 小时内）</li>
+      </ul>
+      <a class="btn btn-block" href="#">开始独立版</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">工作室版</div>
+      <div class="plan-desc">多主体、需要会计一起看账</div>
+      <div class="plan-price">
+        <span class="amount monthly-only">¥79</span><span class="period monthly-only">/ 月</span>
+        <span class="amount annual-only">¥67</span><span class="period annual-only">/ 月</span>
+      </div>
+      <div class="plan-price-note annual-only">按年付 ¥806，一次结清</div>
+      <div class="plan-price-note monthly-only">&nbsp;</div>
+      <ul class="plan-features">
+        <li>无限渠道接入</li>
+        <li>多主体账套管理</li>
+        <li>会计协作席位 ×3</li>
+        <li>自动同步 + 归类规则</li>
+        <li>优先工单支持（4 小时内）</li>
+      </ul>
+      <a class="btn btn-ghost btn-block" href="#">联系升级</a>
+    </div>
+
+  </div>
+</section>
+
+<section class="compare wrap">
+  <h2>三档方案，具体差在哪</h2>
+  <p class="section-sub">按渠道、自动化程度和协作能力拆开看，选适合当下阶段的一档。</p>
+  <div class="compare-table">
+    <div class="compare-row is-header">
+      <div class="compare-cell">对比项</div>
+      <div class="compare-cell">免费版</div>
+      <div class="compare-cell">独立版</div>
+      <div class="compare-cell">工作室版</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">渠道接入数量</div>
+      <div class="compare-cell" data-label="免费版">1 个</div>
+      <div class="compare-cell" data-label="独立版">5 个</div>
+      <div class="compare-cell" data-label="工作室版">无限</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">自动同步</div>
+      <div class="compare-cell" data-label="免费版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="独立版"><span class="yes">每小时</span></div>
+      <div class="compare-cell" data-label="工作室版"><span class="yes">每小时</span></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">归类规则</div>
+      <div class="compare-cell" data-label="免费版">手工</div>
+      <div class="compare-cell" data-label="独立版">自动学习</div>
+      <div class="compare-cell" data-label="工作室版">自动学习</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">报税导出</div>
+      <div class="compare-cell" data-label="免费版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="独立版"><span class="yes">✓</span></div>
+      <div class="compare-cell" data-label="工作室版"><span class="yes">✓</span></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">多主体账套</div>
+      <div class="compare-cell" data-label="免费版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="独立版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="工作室版"><span class="yes">✓</span></div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">协作席位</div>
+      <div class="compare-cell" data-label="免费版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="独立版"><span class="no">—</span></div>
+      <div class="compare-cell" data-label="工作室版">3 席</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell" data-label="对比项">工单响应</div>
+      <div class="compare-cell" data-label="免费版">社区文档</div>
+      <div class="compare-cell" data-label="独立版">24 小时内</div>
+      <div class="compare-cell" data-label="工作室版">4 小时内</div>
+    </div>
+  </div>
+</section>
+
+<section class="faq wrap">
+  <h2>常见问题</h2>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>免费版和独立版的核心区别是什么？</summary>
+      <p>免费版只接 1 个渠道、纯手工记账；独立版接入 5 个渠道自动同步，还能一键导出报税用的季度汇总。有 2 个以上收入渠道的独立开发者，通常直接选独立版更划算。</p>
+    </details>
+    <details class="faq-item">
+      <summary>"渠道"具体指什么？超过额度会怎样？</summary>
+      <p>渠道指 Stripe、App Store Connect、Gumroad、银行卡等收款或入账来源。超过套餐额度后，新渠道会显示为待激活状态，升级套餐即刻生效，不会丢失已同步的历史数据。</p>
+    </details>
+    <details class="faq-item">
+      <summary>年付和月付能随时切换吗？</summary>
+      <p>可以。月付切年付按剩余天数折算差价，立即生效；年付切回月付会在当前计费周期结束后生效，不影响已付费用。</p>
+    </details>
+    <details class="faq-item">
+      <summary>报税导出支持哪些格式？</summary>
+      <p>支持 CSV 和适配国内会计软件的标准模板，导出内容含渠道手续费拆分，可以直接发给会计使用。</p>
+    </details>
+    <details class="faq-item">
+      <summary>工作室版的"多主体"和"协作席位"具体怎么用？</summary>
+      <p>多主体账套让你在一个账号下管理多家公司或工作室的独立账本；协作席位可以邀请会计或合伙人以只读或编辑权限查看指定账套，权限随时可撤回。</p>
+    </details>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="wrap">
+    <h2>把对账的那一天拿回来</h2>
+    <p>五分钟接好第一个渠道，免费版够用就先不升级。</p>
+    <a class="btn" href="#">免费开始</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 账雀 Ledgerbird</span>
+    <span>隐私 · 条款 · status.ledgerbird.app</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var buttons = document.querySelectorAll('.toggle-option');
+    var root = document.documentElement;
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        buttons.forEach(function (b) {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
+        root.setAttribute('data-billing', btn.dataset.billing);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
