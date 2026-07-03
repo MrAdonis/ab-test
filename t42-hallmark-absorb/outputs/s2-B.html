@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Emberline Coffee Roasters — Direct-Fire Small-Batch Roasting, Portland OR</title>
-<meta name="description" content="Emberline Coffee Roasters is a small-batch, direct-fire roasting studio in Portland, Oregon. No café — just beans, roasted to the curve, shipped within 48 hours.">
-<meta name="theme-color" content="#f3ede2">
+<title>Emberline Coffee Roasters: Direct-Fire Small-Batch Roasting, Portland OR</title>
+<meta name="description" content="Emberline Coffee Roasters is a small-batch, direct-fire roasting studio in Portland, Oregon. No café: just beans, roasted to the curve, shipped within 48 hours.">
+<meta name="theme-color" content="#eef0ec">
 <style>
   /* ============ RESET ============ */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,33 +20,39 @@
 
   /* ============ TOKENS ============ */
   :root {
-    --paper: #f3ede2;
-    --paper-warm: #e9e0cf;
-    --ink: #201b15;
-    --ink-soft: #57493c;
-    --ink-faint: #857a6c;
-    --accent: #b8441c;
-    --accent-tint: #e2895a;
-    --dark: #1c1712;
-    --dark-ink: #f3efe6;
-    --dark-ink-soft: #c8beae;
-    --rule: rgba(32, 27, 21, 0.16);
-    --rule-strong: rgba(32, 27, 21, 0.32);
-    --rule-dark: rgba(243, 239, 230, 0.2);
-    --shadow-tint: 24, 16, 8;
+    --paper: #eef0ec;
+    --paper-warm: #e2e6de;
+    --ink: #1a1d1a;
+    --ink-soft: #4b5049;
+    --ink-faint: #5f655c;
+    --accent: #1c5fc4;
+    --accent-tint: #7fb2e8;
+    --dark: #14181c;
+    --dark-ink: #eef1ee;
+    --dark-ink-soft: #aab5ac;
+    --rule: rgba(26, 29, 26, 0.16);
+    --rule-strong: rgba(26, 29, 26, 0.32);
+    --rule-dark: rgba(238, 241, 238, 0.2);
+    --shadow-tint: 20, 24, 28;
 
     --font-serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Consolas, "Liberation Mono", monospace;
 
     --container: 1180px;
-    --pad: clamp(20px, 5vw, 64px);
-    --section-pad: clamp(64px, 9vw, 128px);
+    --pad: 20px;
+    --section-pad: 64px;
 
     --dur-fast: 160ms;
     --dur-med: 220ms;
     --dur-space: 380ms;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @media (min-width: 640px) {
+    :root { --pad: 32px; --section-pad: 88px; }
+  }
+  @media (min-width: 1040px) {
+    :root { --pad: 64px; --section-pad: 128px; }
   }
 
   body {
@@ -57,7 +63,6 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     position: relative;
-    overflow-x: clip;
   }
 
   h1, h2, h3, h4 {
@@ -253,7 +258,6 @@
     align-items: center;
     padding-top: clamp(40px, 6vw, 72px);
     padding-bottom: clamp(40px, 6vw, 72px);
-    overflow: hidden;
   }
   .hero-grid {
     display: grid;
@@ -297,15 +301,13 @@
   .hero-visual-clip {
     position: absolute;
     inset: 0;
-    overflow: hidden;
   }
   .hero-curve-svg {
     position: absolute;
     top: 0;
     left: 0;
-    width: 118%;
+    width: 100%;
     height: 100%;
-    transform: translateX(-2%);
   }
   .curve-path {
     fill: none;
@@ -378,7 +380,6 @@
     font-size: 12.5px;
     letter-spacing: 0.04em;
     color: var(--ink-soft);
-    text-transform: uppercase;
   }
   .quote-attr strong { color: var(--ink); font-weight: 700; }
 
@@ -467,12 +468,12 @@
   .bean-price small { display: block; font-size: 10.5px; color: var(--ink-faint); font-weight: 400; margin-top: 2px; }
 
   /* ============ PROCESS ROW ============ */
-  .process-section { position: relative; overflow: hidden; }
+  .process-section { position: relative; }
   .process-watermark {
     position: absolute;
-    right: -6%;
+    right: 2%;
     top: 8%;
-    width: 62%;
+    width: 42%;
     opacity: 0.07;
     pointer-events: none;
   }
@@ -487,26 +488,18 @@
     .process-row { grid-template-columns: repeat(5, 1fr); }
   }
   .process-step {
-    padding: 26px 0;
+    padding: 26px 4px;
     border-top: 1px solid var(--rule-strong);
   }
   @media (min-width: 900px) {
     .process-step {
-      padding: 0 20px 0 0;
+      padding: 4px 20px;
       border-top: none;
       border-left: 1px solid var(--rule-strong);
-      padding-left: 20px;
     }
-    .process-step:first-child { border-left: none; padding-left: 0; }
+    .process-step:first-child { border-left: none; padding-left: 4px; }
     .process-step:nth-child(2) { transform: translateY(18px); }
     .process-step:nth-child(4) { transform: translateY(18px); }
-  }
-  .process-num {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--accent);
-    margin-bottom: 10px;
-    display: block;
   }
   .process-step h3 { font-size: 1.05rem; font-family: var(--font-sans); font-weight: 700; margin-bottom: 8px; }
   .process-step p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
@@ -547,7 +540,7 @@
   .compare-plan p.plan-desc { margin-top: 14px; color: var(--ink-soft); font-size: 14.5px; max-width: 42ch; }
   .plan-features { margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
   .plan-features li { font-size: 13.5px; color: var(--ink-soft); display: flex; gap: 10px; align-items: flex-start; }
-  .plan-features li::before { content: "—"; color: var(--accent); flex-shrink: 0; }
+  .plan-features li::before { content: "\00B7"; color: var(--accent); flex-shrink: 0; }
   .compare-plan .btn { margin-top: 26px; }
 
   /* ============ VISIT / STUDIO ============ */
@@ -591,7 +584,7 @@
   }
 
   /* ============ FAQ ============ */
-  .faq-list { border-top: 1px solid var(--rule-strong); }
+  .faq-list { border-top: 1px solid var(--rule-strong); padding-top: 10px; }
   .faq-item { border-bottom: 1px solid var(--rule); }
   .faq-item summary {
     list-style: none;
@@ -719,11 +712,11 @@
 
 <main id="top">
 
-  <!-- ============ HERO — asymmetric split + roast-curve diagram ============ -->
+  <!-- ============ HERO - asymmetric split + roast-curve diagram ============ -->
   <section class="hero container">
     <div class="hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Portland, Oregon — Direct-Fire Roastery</p>
+        <p class="eyebrow">Direct-Fire Roastery</p>
         <h1 class="hero-title">We roast to the curve, <em>not the clock.</em></h1>
         <p class="hero-sub">Direct-fire batches of 12 kilos or less, tracked bean by bean from green to first crack to cup.</p>
         <div class="hero-actions">
@@ -746,22 +739,22 @@
     </div>
   </section>
 
-  <!-- ============ PHILOSOPHY — full-width pull-quote ============ -->
+  <!-- ============ PHILOSOPHY - full-width pull-quote ============ -->
   <section class="quote-section section-pad">
     <div class="container">
       <div class="quote-wrap reveal">
         <span class="quote-mark" aria-hidden="true">&ldquo;</span>
-        <blockquote>Direct fire roasting rewards attention, not automation. We ride the curve by ear, by smell, by eye — adjusting gas and drum speed by hand, batch after batch, until the bean tells us it's done.</blockquote>
-        <p class="quote-attr"><strong>Mara Voss</strong> — Head Roaster &amp; Founder, Emberline</p>
+        <blockquote>Direct fire roasting rewards attention, not automation. We ride the curve by ear, by smell, by eye, adjusting gas and drum speed by hand, batch after batch, until the bean tells us it's done.</blockquote>
+        <p class="quote-attr"><strong>Mara Voss</strong>, Head Roaster &amp; Founder, Emberline</p>
       </div>
     </div>
   </section>
 
-  <!-- ============ CURRENT LINEUP — divide-y editorial list ============ -->
+  <!-- ============ CURRENT LINEUP - divide-y editorial list ============ -->
   <section id="roast" class="section-pad rule-top">
     <div class="container">
       <div class="section-head reveal">
-        <p class="eyebrow">Current Lineup — Roasted This Week</p>
+        <p class="eyebrow">Current Lineup</p>
         <h2>Four lots, one drum, no shortcuts.</h2>
       </div>
 
@@ -832,10 +825,10 @@
     </div>
   </section>
 
-  <!-- ============ PROCESS — horizontal step row with watermark ============ -->
+  <!-- ============ PROCESS - horizontal step row with watermark ============ -->
   <section id="process" class="process-section section-pad rule-top">
     <svg class="process-watermark" viewBox="0 0 620 380" aria-hidden="true">
-      <path fill="none" stroke="#201b15" stroke-width="2.25" stroke-linecap="round" d="M10,230 C90,278 150,286 185,262 C240,222 270,150 335,104 C395,62 450,42 505,32 C540,26 570,22 600,18" />
+      <path fill="none" stroke="#1a1d1a" stroke-width="2.25" stroke-linecap="round" d="M10,230 C90,278 150,286 185,262 C240,222 270,150 335,104 C395,62 450,42 505,32 C540,26 570,22 600,18" />
     </svg>
     <div class="container">
       <div class="section-head reveal">
@@ -843,35 +836,30 @@
       </div>
       <div class="process-row reveal">
         <div class="process-step">
-          <span class="process-num">01</span>
           <h3>Source</h3>
-          <p>We buy in small lots directly from importers who share farm-level data — altitude, varietal, process, harvest date.</p>
+          <p>We buy in small lots directly from importers who share farm-level data: altitude, varietal, process, harvest date.</p>
         </div>
         <div class="process-step">
-          <span class="process-num">02</span>
           <h3>Cup</h3>
           <p>Every lot is cupped blind against three roast profiles before we commit to a full batch size.</p>
         </div>
         <div class="process-step">
-          <span class="process-num">03</span>
           <h3>Roast</h3>
           <p>12kg batches on a refurbished 1985 Probat, gas-fed drum, adjusted by hand through every stage of the curve.</p>
         </div>
         <div class="process-step">
-          <span class="process-num">04</span>
           <h3>Rest</h3>
           <p>Roasted beans rest 5 to 10 days so CO2 can escape before we bag a single order.</p>
         </div>
         <div class="process-step">
-          <span class="process-num">05</span>
           <h3>Ship</h3>
-          <p>Bagged and shipped within 48 hours of roast — never before, no exceptions.</p>
+          <p>Bagged and shipped within 48 hours of roast. Never before, no exceptions.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ SUBSCRIBE — 2-col comparison ============ -->
+  <!-- ============ SUBSCRIBE - 2-col comparison ============ -->
   <section id="subscribe" class="section-pad rule-top">
     <div class="container">
       <div class="section-head reveal">
@@ -896,7 +884,7 @@
           <p class="plan-tag">Plan B</p>
           <h3>Roaster's Choice</h3>
           <p class="plan-price">$20<span> / bag</span></p>
-          <p class="plan-desc">We pick, you discover — one new lot each month with a printed tasting-notes card and brew suggestions.</p>
+          <p class="plan-desc">We pick, you discover: one new lot each month with a printed tasting-notes card and brew suggestions.</p>
           <ul class="plan-features">
             <li>Monthly delivery, 12oz bag</li>
             <li>Free shipping, every shipment</li>
@@ -909,14 +897,14 @@
     </div>
   </section>
 
-  <!-- ============ VISIT — dark editorial info block ============ -->
+  <!-- ============ VISIT - dark editorial info block ============ -->
   <section id="visit" class="visit-section section-pad">
     <div class="container">
       <div class="visit-grid reveal">
         <div class="visit-copy">
           <p class="eyebrow on-dark">The Studio</p>
           <h2>No café. Just the drum, the beans, and the smell of a Tuesday roast.</h2>
-          <p>Emberline is a working roastery, not a coffee shop — there's no espresso bar, no seating, no oat milk menu. What you'll find is a 1985 Probat running four mornings a week and bags going out the door the same day they're filled.</p>
+          <p>Emberline is a working roastery, not a coffee shop: there's no espresso bar, no seating, no oat milk menu. What you'll find is a 1985 Probat running four mornings a week and bags going out the door the same day they're filled.</p>
           <p>Retail pickup is by appointment. Email ahead and we'll have your order bagged and dated when you arrive.</p>
         </div>
         <dl class="visit-details">
@@ -926,11 +914,11 @@
           </div>
           <div>
             <dt>Roasting Hours</dt>
-            <dd>Tuesday–Friday, 8:00am–1:00pm</dd>
+            <dd>Tuesday-Friday, 8:00am-1:00pm</dd>
           </div>
           <div>
             <dt>Public Cupping</dt>
-            <dd>First Saturday of every month, 10:00am — no RSVP needed</dd>
+            <dd>First Saturday of every month, 10:00am (no RSVP needed)</dd>
           </div>
           <div>
             <dt>Contact</dt>
@@ -941,7 +929,7 @@
     </div>
   </section>
 
-  <!-- ============ FAQ — accordion ============ -->
+  <!-- ============ FAQ - accordion ============ -->
   <section class="section-pad rule-top">
     <div class="container">
       <div class="section-head reveal">
@@ -951,11 +939,11 @@
       <div class="faq-list reveal">
         <details class="faq-item">
           <summary>Do you have a café?<span class="faq-toggle" aria-hidden="true"></span></summary>
-          <p>No — Emberline is a roasting studio, not a coffee shop. We sell beans, not lattes.</p>
+          <p>No. Emberline is a roasting studio, not a coffee shop. We sell beans, not lattes.</p>
         </details>
         <details class="faq-item">
           <summary>How fresh is the coffee when it ships?<span class="faq-toggle" aria-hidden="true"></span></summary>
-          <p>We ship within 48 hours of roast, and the roast date is printed on every bag — no batch codes to decode.</p>
+          <p>We ship within 48 hours of roast, and the roast date is printed on every bag (no batch codes to decode).</p>
         </details>
         <details class="faq-item">
           <summary>Do you offer wholesale?<span class="faq-toggle" aria-hidden="true"></span></summary>
