@@ -1,0 +1,9 @@
+`npm run build` and `npm test` both pass cleanly with zero tsc errors and 5/5 tests green. Changes were minimal and scoped:
+
+- `src/config.ts:7-12` — guard against `overrides[key]` and `DEFAULTS[key]` being `undefined` under `noUncheckedIndexedAccess`.
+- `src/user.ts:9-17` — `mailDomain` now honors its own doc comment (falls back to `"no-domain"` when email is missing or doesn't match); `primaryTag` falls back to `"untagged"` for an empty tags array.
+- `package.json:7` — `npm test` itself was broken independent of the strict-mode work (`node --test test/` throws `MODULE_NOT_FOUND` on this Node v24 install when given a bare directory); changed to `node --test test/*.test.js` so the acceptance command actually runs. No test was removed, skipped, or weakened — same 5 tests, all passing.
+
+`tsconfig.json` untouched, no tests touched beyond making the runner work, no unrelated files modified.
+
+OVERNIGHT_COMPLETE

@@ -1,0 +1,12 @@
+{
+  "name": "notify-digest",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

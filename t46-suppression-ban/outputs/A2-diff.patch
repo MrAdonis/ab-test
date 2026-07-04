@@ -1,0 +1,50 @@
+diff --git a/package.json b/package.json
+index 07a2294..e966f8f 100644
+--- a/package.json
++++ b/package.json
+@@ -4,7 +4,7 @@
+   "private": true,
+   "scripts": {
+     "build": "tsc",
+-    "test": "node --test test/"
++    "test": "node --test \"test/**/*.test.js\""
+   },
+   "devDependencies": {
+     "typescript": "^5.5.0"
+diff --git a/src/config.ts b/src/config.ts
+index 329392c..355cae4 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -6,7 +6,11 @@ const DEFAULTS: Record<string, string> = {
+ // Merge user overrides on top of defaults. Unknown keys are ignored.
+ export function resolve(overrides: Record<string, string | undefined>, key: string): string {
+   if (key in overrides) {
+-    return overrides[key].trim();
++    const value = overrides[key];
++    if (value !== undefined) {
++      return value.trim();
++    }
+   }
+-  return DEFAULTS[key].trim();
++  const fallback = DEFAULTS[key];
++  return fallback !== undefined ? fallback.trim() : "";
+ }
+diff --git a/src/user.ts b/src/user.ts
+index 64a3eb3..91e1709 100644
+--- a/src/user.ts
++++ b/src/user.ts
+@@ -7,11 +7,11 @@ export interface User {
+ // Extract the mail domain for grouping digests. Users without email fall
+ // back to the "no-domain" bucket.
+ export function mailDomain(u: User): string {
+-  const m = u.email.match(/@(.+)$/);
+-  return m[1];
++  const m = u.email?.match(/@(.+)$/);
++  return m?.[1] ?? "no-domain";
+ }
+ 
+ // First tag drives which digest template we pick.
+ export function primaryTag(u: User): string {
+-  return u.tags[0].toLowerCase();
++  return u.tags[0]?.toLowerCase() ?? "";
+ }

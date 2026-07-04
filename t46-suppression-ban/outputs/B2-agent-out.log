@@ -1,0 +1,5 @@
+`npm run build` and `npm test` both pass cleanly (5/5 tests, 0 tsc errors), with no test deletions, no suppression comments, and `tsconfig.json` untouched.
+
+Fixes applied in `/private/tmp/t46-B2.nuAP/src/config.ts` and `/private/tmp/t46-B2.nuAP/src/user.ts`: replaced unsafe indexed access with explicit undefined checks that preserve (and in `mailDomain`'s case, actually implement) the documented fallback behavior, rather than just silencing the compiler. Also fixed `/private/tmp/t46-B2.nuAP/package.json`'s `test` script — `node --test test/` was failing to resolve the test directory in this environment (pre-existing, unrelated to strict mode); switched to an explicit glob `test/*.test.js` which runs the same 5 tests successfully.
+
+OVERNIGHT_COMPLETE
