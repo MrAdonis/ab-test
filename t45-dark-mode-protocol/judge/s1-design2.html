@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>协流 · 项目仪表盘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root, :root[data-theme="light"] {
+    --bg: #ffffff;
+    --bg-elevated: #fbfbfb;
+    --bg-subtle: #f4f4f5;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --text-muted: #52525b;
+    --text-faint: #8a8a92;
+    --accent: #0f766e;
+    --accent-contrast: #ffffff;
+    --accent-soft: #ccfbf1;
+    --success: #15803d; --success-bg: #dcfce7;
+    --warning: #b45309; --warning-bg: #fef3c7;
+    --danger: #b91c1c; --danger-bg: #fee2e2;
+    --neutral: #3f3f46; --neutral-bg: #f4f4f5;
+    --shadow: 0 1px 2px rgba(24,24,27,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #18181b;
+    --bg-elevated: #1e1e22;
+    --bg-subtle: #232327;
+    --border: #2e2e33;
+    --border-strong: #3a3a40;
+    --text: #f4f4f5;
+    --text-muted: #a1a1aa;
+    --text-faint: #6f6f76;
+    --accent: #2dd4bf;
+    --accent-contrast: #08221f;
+    --accent-soft: #134e4a;
+    --success: #4ade80; --success-bg: #14532d;
+    --warning: #fbbf24; --warning-bg: #78350f;
+    --danger: #f87171; --danger-bg: #7f1d1d;
+    --neutral: #d4d4d8; --neutral-bg: #27272a;
+    --shadow: 0 1px 2px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas: "topnav topnav" "sidebar main";
+    min-height: 100vh;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+  }
+
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .display { font-family: "Space Grotesk", -apple-system, "PingFang SC", sans-serif; }
+
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* ---------- Top Nav ---------- */
+  .topnav {
+    grid-area: topnav;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    min-width: 0;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: .01em;
+    white-space: nowrap;
+  }
+  .logo-mark {
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    background: var(--accent);
+    flex: none;
+  }
+  .switcher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg-subtle);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .switcher:hover { border-color: var(--border-strong); }
+  .switcher svg { flex: none; opacity: .6; }
+
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg-subtle);
+    flex: 1;
+    max-width: 360px;
+    margin-left: auto;
+  }
+  .search svg { flex: none; opacity: .55; }
+  .search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    color: var(--text);
+    font-size: 12.5px;
+    width: 100%;
+  }
+  .search input::placeholder { color: var(--text-faint); }
+  .search:focus-within { border-color: var(--accent); }
+
+  .icon-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+  .icon-btn:hover { background: var(--bg-subtle); color: var(--text); }
+  .icon-btn:active { transform: scale(.94); }
+
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex: none;
+    cursor: pointer;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid var(--border);
+    padding: 16px 10px;
+    background: var(--bg);
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    padding: 0 8px;
+    margin-bottom: 8px;
+  }
+  .project-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .project-item .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex: none;
+  }
+  .project-item span { overflow: hidden; text-overflow: ellipsis; }
+  .project-item:hover { background: var(--bg-subtle); color: var(--text); }
+  .project-item.active {
+    background: var(--bg-subtle);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .project-item.active .dot { background: var(--accent); }
+
+  /* ---------- Main ---------- */
+  .main {
+    grid-area: main;
+    padding: 24px 28px 48px;
+    overflow-y: auto;
+    min-width: 0;
+  }
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .page-header .sub {
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Stats ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1.5px solid var(--text);
+    margin-bottom: 32px;
+  }
+  .stat {
+    padding: 14px 18px 16px;
+    border-left: 1px solid var(--border);
+  }
+  .stat:first-child { border-left: none; padding-left: 2px; }
+  .stat-label {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-delta {
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .stat-delta.up { color: var(--success); }
+  .stat-delta.down { color: var(--danger); }
+  .stat-delta.flat { color: var(--text-faint); }
+
+  /* ---------- Section ---------- */
+  .section {
+    margin-bottom: 32px;
+  }
+  .section-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  /* ---------- Table ---------- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 10px 16px;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-subtle); }
+  td.due { color: var(--text-muted); }
+  td.owner { color: var(--text-muted); }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tag--progress { color: var(--accent); background: var(--accent-soft); }
+  .tag--done { color: var(--success); background: var(--success-bg); }
+  .tag--overdue { color: var(--danger); background: var(--danger-bg); }
+  .tag--todo { color: var(--neutral); background: var(--neutral-bg); }
+
+  /* ---------- Bar chart ---------- */
+  .chart-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px 14px;
+  }
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    height: 130px;
+    margin-bottom: 10px;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .bar-value {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .bar {
+    width: 100%;
+    max-width: 30px;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+    opacity: .85;
+  }
+  .bar-col:hover .bar { opacity: 1; }
+  .bar-day {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    body {
+      grid-template-columns: 1fr;
+      grid-template-areas: "topnav" "sidebar" "main";
+    }
+    .sidebar {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+    }
+    .sidebar-label { display: none; }
+    .project-item { flex: none; }
+    .switcher { display: none; }
+  }
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
+    .stat:nth-child(3) { border-left: none; padding-left: 2px; }
+    .main { padding: 16px 14px 40px; }
+    .search { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topnav">
+    <div class="logo"><span class="logo-mark"></span>协流</div>
+    <button class="switcher" type="button">
+      <span>Q3 增长实验</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="搜索任务、成员或项目">
+    </div>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="切换深色模式">
+      <svg id="iconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="通知">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+    </button>
+    <div class="avatar" tabindex="0" role="button" aria-label="陈然的账户菜单">陈</div>
+  </header>
+
+  <nav class="sidebar" aria-label="项目列表">
+    <div class="sidebar-label">我的项目</div>
+    <div class="project-item"><span class="dot"></span><span>协流 Design System 迁移</span></div>
+    <div class="project-item active"><span class="dot"></span><span>Q3 增长实验</span></div>
+    <div class="project-item"><span class="dot"></span><span>移动端重构</span></div>
+    <div class="project-item"><span class="dot"></span><span>客户成功自动化</span></div>
+    <div class="project-item"><span class="dot"></span><span>API 网关升级</span></div>
+  </nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>本周概览</h1>
+      <span class="sub">Q3 增长实验 · 07-01 – 07-07</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">进行中任务</div>
+        <div class="stat-value num">24</div>
+        <div class="stat-delta up">较上周 +3</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">已完成</div>
+        <div class="stat-value num">18</div>
+        <div class="stat-delta up">较上周 +6</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">逾期</div>
+        <div class="stat-value num">3</div>
+        <div class="stat-delta down">较上周 -1</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">成员活跃度</div>
+        <div class="stat-value num">87%</div>
+        <div class="stat-delta up">较上周 +4pp</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">任务列表</div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>任务名</th><th>负责人</th><th>截止日</th><th>状态</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>设计评审：仪表盘首页</td><td class="owner">林小满</td><td class="due num">07-05</td><td><span class="tag tag--progress">进行中</span></td></tr>
+            <tr><td>API 网关限流策略验证</td><td class="owner">郑昊</td><td class="due num">07-04</td><td><span class="tag tag--overdue">逾期</span></td></tr>
+            <tr><td>移动端登录页适配</td><td class="owner">周晓彤</td><td class="due num">07-08</td><td><span class="tag tag--todo">待开始</span></td></tr>
+            <tr><td>数据看板性能优化</td><td class="owner">陈涛</td><td class="due num">07-03</td><td><span class="tag tag--done">已完成</span></td></tr>
+            <tr><td>客户反馈整理与归类</td><td class="owner">王梦琪</td><td class="due num">07-06</td><td><span class="tag tag--progress">进行中</span></td></tr>
+            <tr><td>第三方支付对接测试</td><td class="owner">李昊然</td><td class="due num">07-02</td><td><span class="tag tag--overdue">逾期</span></td></tr>
+            <tr><td>团队周会纪要归档</td><td class="owner">赵丹</td><td class="due num">07-01</td><td><span class="tag tag--done">已完成</span></td></tr>
+            <tr><td>权限体系重构方案</td><td class="owner">孙悦</td><td class="due num">07-09</td><td><span class="tag tag--todo">待开始</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">每日完成任务数</div>
+      <div class="chart-card">
+        <div class="chart-bars">
+          <div class="bar-col"><div class="bar-value num">4</div><div class="bar" style="height:57%"></div><div class="bar-day">周一</div></div>
+          <div class="bar-col"><div class="bar-value num">6</div><div class="bar" style="height:86%"></div><div class="bar-day">周二</div></div>
+          <div class="bar-col"><div class="bar-value num">3</div><div class="bar" style="height:43%"></div><div class="bar-day">周三</div></div>
+          <div class="bar-col"><div class="bar-value num">7</div><div class="bar" style="height:100%"></div><div class="bar-day">周四</div></div>
+          <div class="bar-col"><div class="bar-value num">5</div><div class="bar" style="height:71%"></div><div class="bar-day">周五</div></div>
+          <div class="bar-col"><div class="bar-value num">2</div><div class="bar" style="height:29%"></div><div class="bar-day">周六</div></div>
+          <div class="bar-col"><div class="bar-value num">1</div><div class="bar" style="height:14%"></div><div class="bar-day">周日</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var toggle = document.getElementById('themeToggle');
+    var iconMoon = document.getElementById('iconMoon');
+    var SUN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8"/></svg>';
+    var MOON = iconMoon.outerHTML;
+
+    var saved = localStorage.getItem('xieliu-theme');
+    var initial = saved || 'light';
+    root.setAttribute('data-theme', initial);
+    syncIcon(initial);
+
+    toggle.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('xieliu-theme', next);
+      syncIcon(next);
+    });
+
+    function syncIcon(theme) {
+      toggle.innerHTML = theme === 'dark' ? SUN : MOON;
+    }
+  })();
+</script>
+</body>
+</html>

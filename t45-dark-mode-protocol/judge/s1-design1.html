@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>协流 · 项目仪表盘</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --bg-subtle: #f4f4f3;
+    --bg-hover: #ececea;
+    --surface: #ffffff;
+    --text-primary: #18181b;
+    --text-secondary: #52525b;
+    --text-muted: #a1a1aa;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --accent: #4f46e5;
+    --accent-tint: #eef2ff;
+    --accent-text-on-tint: #4338ca;
+    --success: #16a34a;
+    --success-tint: #f0fdf4;
+    --danger: #dc2626;
+    --danger-tint: #fef2f2;
+    --warning: #d97706;
+    --warning-tint: #fffbeb;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    --bg: #101014;
+    --bg-subtle: #18181b;
+    --bg-hover: #1f1f23;
+    --surface: #18181b;
+    --text-primary: #f4f4f5;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --border: #27272a;
+    --border-strong: #323236;
+    --accent: #818cf8;
+    --accent-tint: rgba(129, 140, 248, 0.14);
+    --accent-text-on-tint: #a5b4fc;
+    --success: #4ade80;
+    --success-tint: rgba(74, 222, 128, 0.12);
+    --danger: #f87171;
+    --danger-tint: rgba(248, 113, 113, 0.12);
+    --warning: #fbbf24;
+    --warning-tint: rgba(251, 191, 36, 0.12);
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101014;
+      --bg-subtle: #18181b;
+      --bg-hover: #1f1f23;
+      --surface: #18181b;
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --border: #27272a;
+      --border-strong: #323236;
+      --accent: #818cf8;
+      --accent-tint: rgba(129, 140, 248, 0.14);
+      --accent-text-on-tint: #a5b4fc;
+      --success: #4ade80;
+      --success-tint: rgba(74, 222, 128, 0.12);
+      --danger: #f87171;
+      --danger-tint: rgba(248, 113, 113, 0.12);
+      --warning: #fbbf24;
+      --warning-tint: rgba(251, 191, 36, 0.12);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, input, select {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+      "header header"
+      "sidebar main";
+    min-height: 100dvh;
+  }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+
+  .logo-mark {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .project-switch {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    max-width: 180px;
+    cursor: pointer;
+    transition: border-color 150ms ease-out, background 150ms ease-out;
+  }
+
+  .project-switch:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .search-wrap {
+    flex: 1;
+    max-width: 360px;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 12px 0 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    transition: border-color 150ms ease-out, background 150ms ease-out;
+  }
+
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .search-input:hover {
+    background: var(--bg-hover);
+  }
+
+  .search-input:focus {
+    background: var(--surface);
+    border-color: var(--accent);
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .theme-toggle {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 150ms ease-out, transform 100ms ease-out;
+  }
+
+  .theme-toggle:hover { background: var(--bg-hover); }
+  .theme-toggle:active { transform: scale(0.96); }
+  .theme-toggle svg { width: 17px; height: 17px; }
+  .theme-toggle .icon-sun { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-tint);
+    color: var(--accent-text-on-tint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    /* clickable area extended via padding wrapper below */
+  }
+
+  .avatar-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 150ms ease-out;
+  }
+  .avatar-btn:hover { background: var(--bg-hover); }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid var(--border);
+    padding: 16px 8px;
+    overflow-y: auto;
+  }
+
+  .sidebar-label {
+    padding: 0 8px 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-item a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 8px;
+    border-radius: var(--radius-md);
+    border-left: 2px solid transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 150ms ease-out, color 150ms ease-out;
+  }
+
+  .nav-item a:hover {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+
+  .nav-item.active a {
+    background: var(--accent-tint);
+    color: var(--accent-text-on-tint);
+    border-left-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .nav-item.active .nav-dot { background: var(--accent); }
+
+  /* ---------- Main ---------- */
+  .main {
+    grid-area: main;
+    padding: 24px 32px 48px;
+    overflow-y: auto;
+  }
+
+  .main-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  h1.page-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .page-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 2px 0 0;
+  }
+
+  /* Stat row — no card containers, divider-based grouping (DENSITY high) */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .stat {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 27px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.danger { color: var(--danger); }
+
+  .stat-delta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Section blocks */
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+
+  /* Task table */
+  .table-wrap {
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  table.tasks {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  table.tasks thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  table.tasks tbody td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  table.tasks tbody tr {
+    transition: background 150ms ease-out;
+  }
+
+  table.tasks tbody tr:hover {
+    background: var(--bg-subtle);
+  }
+
+  .task-name { font-weight: 500; }
+
+  .assignee {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+  }
+
+  .assignee-chip {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .due-date {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-doing { background: var(--accent-tint); color: var(--accent-text-on-tint); }
+  .status-doing .status-dot { background: var(--accent); }
+
+  .status-review { background: var(--warning-tint); color: var(--warning); }
+  .status-review .status-dot { background: var(--warning); }
+
+  .status-overdue { background: var(--danger-tint); color: var(--danger); }
+  .status-overdue .status-dot { background: var(--danger); }
+
+  .status-done { background: var(--success-tint); color: var(--success); }
+  .status-done .status-dot { background: var(--success); }
+
+  .status-pending { background: var(--bg-subtle); color: var(--text-muted); }
+  .status-pending .status-dot { background: var(--text-muted); }
+
+  /* Bar chart — pure CSS */
+  .chart-wrap {
+    border-top: 1px solid var(--border);
+    padding: 20px 4px 4px;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    height: 180px;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .bar-value {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+  }
+
+  .bar {
+    width: 100%;
+    max-width: 36px;
+    background: var(--accent-tint);
+    border-top: 2px solid var(--accent);
+    border-radius: 2px 2px 0 0;
+    transition: opacity 150ms ease-out;
+  }
+
+  .bar-col:hover .bar { opacity: 0.8; }
+
+  .bar-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  /* Responsive: no horizontal page scroll at 375px */
+  @media (max-width: 860px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "header"
+        "main";
+    }
+    .sidebar { display: none; }
+    .search-wrap { display: none; }
+    .stat-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stat:nth-child(2) { border-right: none; }
+    .stat:nth-child(3), .stat:nth-child(4) { border-top: 1px solid var(--border); }
+    .main { padding: 20px 16px 40px; }
+    .chart-wrap { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="logo">
+      <span class="logo-mark">协</span>
+      <span>协流</span>
+    </div>
+
+    <select class="project-switch" aria-label="切换项目">
+      <option>协流 · 官网重构</option>
+      <option>协流 · 移动端 v2</option>
+      <option>协流 · 内部工具</option>
+    </select>
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="9" cy="9" r="6"></circle>
+        <line x1="17" y1="17" x2="13.4" y2="13.4"></line>
+      </svg>
+      <input class="search-input" type="text" placeholder="搜索项目、任务…" aria-label="搜索项目或任务">
+    </div>
+
+    <div class="topbar-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="切换深色模式">
+        <svg class="icon-moon" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M17 10.5A7 7 0 0 1 9.5 3a7 7 0 1 0 7.5 7.5Z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="10" cy="10" r="3.6"></circle>
+          <line x1="10" y1="2" x2="10" y2="4"></line>
+          <line x1="10" y1="16" x2="10" y2="18"></line>
+          <line x1="2" y1="10" x2="4" y2="10"></line>
+          <line x1="16" y1="10" x2="18" y2="10"></line>
+        </svg>
+      </button>
+      <button class="avatar-btn" aria-label="账户菜单，当前用户王芸">
+        <span class="avatar" aria-hidden="true">王</span>
+      </button>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-label">我的项目</div>
+    <ul class="nav-list">
+      <li class="nav-item active">
+        <a href="#" aria-current="page"><span class="nav-dot"></span>官网重构</a>
+      </li>
+      <li class="nav-item">
+        <a href="#"><span class="nav-dot"></span>移动端 v2</a>
+      </li>
+      <li class="nav-item">
+        <a href="#"><span class="nav-dot"></span>内部工具</a>
+      </li>
+      <li class="nav-item">
+        <a href="#"><span class="nav-dot"></span>数据中台迁移</a>
+      </li>
+      <li class="nav-item">
+        <a href="#"><span class="nav-dot"></span>客户成功自动化</a>
+      </li>
+    </ul>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div>
+        <h1 class="page-title">本周概览</h1>
+        <p class="page-sub">07 月 01 日 – 07 月 07 日 · 官网重构</p>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-label">进行中任务</div>
+        <div class="stat-value accent">23</div>
+        <div class="stat-delta">较上周 +3</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">已完成</div>
+        <div class="stat-value">156</div>
+        <div class="stat-delta">较上周 +18</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">逾期</div>
+        <div class="stat-value danger">4</div>
+        <div class="stat-delta">较上周 +1</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">成员活跃度</div>
+        <div class="stat-value">78%</div>
+        <div class="stat-delta">较上周 -2%</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">任务列表</h2>
+      <div class="table-wrap">
+        <table class="tasks">
+          <thead>
+            <tr>
+              <th>任务名</th>
+              <th>负责人</th>
+              <th>截止日</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="task-name">设计评审：首页改版原型</td>
+              <td><span class="assignee"><span class="assignee-chip">陈</span>陈思</span></td>
+              <td class="due-date">07-05</td>
+              <td><span class="status-tag status-review"><span class="status-dot"></span>待评审</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">修复登录态过期报错</td>
+              <td><span class="assignee"><span class="assignee-chip">林</span>林昊</span></td>
+              <td class="due-date">07-04</td>
+              <td><span class="status-tag status-overdue"><span class="status-dot"></span>已逾期</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">Q3 路线图文档整理</td>
+              <td><span class="assignee"><span class="assignee-chip">王</span>王芸</span></td>
+              <td class="due-date">07-08</td>
+              <td><span class="status-tag status-doing"><span class="status-dot"></span>进行中</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">API 网关限流联调</td>
+              <td><span class="assignee"><span class="assignee-chip">赵</span>赵鹏</span></td>
+              <td class="due-date">07-06</td>
+              <td><span class="status-tag status-doing"><span class="status-dot"></span>进行中</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">客户培训材料录制</td>
+              <td><span class="assignee"><span class="assignee-chip">李</span>李娜</span></td>
+              <td class="due-date">07-10</td>
+              <td><span class="status-tag status-pending"><span class="status-dot"></span>待处理</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">移动端适配走查</td>
+              <td><span class="assignee"><span class="assignee-chip">陈</span>陈思</span></td>
+              <td class="due-date">07-03</td>
+              <td><span class="status-tag status-overdue"><span class="status-dot"></span>已逾期</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">埋点方案对齐</td>
+              <td><span class="assignee"><span class="assignee-chip">张</span>张伟</span></td>
+              <td class="due-date">07-09</td>
+              <td><span class="status-tag status-doing"><span class="status-dot"></span>进行中</span></td>
+            </tr>
+            <tr>
+              <td class="task-name">版本 v2.4 发布检查</td>
+              <td><span class="assignee"><span class="assignee-chip">林</span>林昊</span></td>
+              <td class="due-date">07-07</td>
+              <td><span class="status-tag status-done"><span class="status-dot"></span>已完成</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">每日完成数</h2>
+      <div class="chart-wrap" role="img" aria-label="本周每日完成任务数：周一 12，周二 18，周三 9，周四 22，周五 15，周六 7，周日 4">
+        <div class="bar-col"><div class="bar-value">12</div><div class="bar" style="height:54.5%"></div><div class="bar-label">一</div></div>
+        <div class="bar-col"><div class="bar-value">18</div><div class="bar" style="height:81.8%"></div><div class="bar-label">二</div></div>
+        <div class="bar-col"><div class="bar-value">9</div><div class="bar" style="height:40.9%"></div><div class="bar-label">三</div></div>
+        <div class="bar-col"><div class="bar-value">22</div><div class="bar" style="height:100%"></div><div class="bar-label">四</div></div>
+        <div class="bar-col"><div class="bar-value">15</div><div class="bar" style="height:68.2%"></div><div class="bar-label">五</div></div>
+        <div class="bar-col"><div class="bar-value">7</div><div class="bar" style="height:31.8%"></div><div class="bar-label">六</div></div>
+        <div class="bar-col"><div class="bar-value">4</div><div class="bar" style="height:18.2%"></div><div class="bar-label">日</div></div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('themeToggle');
+    var root = document.documentElement;
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var current = prefersDark ? 'dark' : 'light';
+
+    toggle.addEventListener('click', function () {
+      current = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', current);
+    });
+  })();
+</script>
+
+</body>
+</html>

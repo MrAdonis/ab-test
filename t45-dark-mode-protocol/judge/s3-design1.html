@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>浮屿书店 · 本月选书与店主手记</title>
+<style>
+  @font-face {
+    font-family: 'NotoSerifFallback';
+    src: local('Noto Serif SC'), local('Songti SC');
+  }
+
+  :root{
+    --paper: #f4f0e5;
+    --paper-shade: #ece5d4;
+    --ink: #1c1712;
+    --ink-soft: #46403a;
+    --rule: #c9bfa9;
+    --accent: #9a3324; /* 单一强调色：印章朱红 */
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background: #d8d0bd;
+  }
+
+  body{
+    font-family: "PingFang SC", "Songti SC", "Noto Serif SC", "STSong", serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- 纸面容器 ---- */
+  .page{
+    position: relative;
+    max-width: 780px;
+    margin: 48px auto 96px;
+    background: var(--paper);
+    padding: 56px 60px 40px;
+    box-shadow:
+      0 1px 0 rgba(28,23,18,0.06),
+      0 24px 48px -20px rgba(28,23,18,0.35),
+      0 2px 6px rgba(28,23,18,0.12);
+    animation: pageIn .6s ease-out both;
+  }
+
+  @keyframes pageIn{
+    from{ opacity: 0; transform: translateY(10px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+
+  /* 印刷颗粒噪点，只在固定伪元素上，不叠加在滚动内容 */
+  .page::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    opacity:.5;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'>\
+<feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/>\
+<feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0'/>\
+</filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .page{ animation: none; }
+  }
+
+  /* ---- 报头 masthead ---- */
+  .masthead{
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 22px;
+    border-bottom: 3px double var(--ink);
+  }
+
+  .masthead .eyebrow{
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+    font-size: 11px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+
+  .masthead h1{
+    font-size: clamp(40px, 8vw, 62px);
+    font-weight: 900;
+    letter-spacing: .04em;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .masthead .tagline{
+    margin: 14px 0 0;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    letter-spacing: .02em;
+  }
+
+  .masthead .locus{
+    margin-top: 14px;
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    font-size: 11px;
+    letter-spacing: .14em;
+    color: var(--ink-soft);
+  }
+
+  /* ---- 正文分区通用 ---- */
+  section{
+    position: relative;
+    z-index: 1;
+    padding: 40px 0;
+  }
+
+  section + section{
+    border-top: 1px solid var(--rule);
+  }
+
+  .section-head{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .section-head h2{
+    font-size: 22px;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: .02em;
+  }
+
+  .section-head .no{
+    font-family: Georgia, "Noto Serif SC", serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: .08em;
+  }
+
+  /* ---- 店主手记：杂志双栏 + 首字下沉 ---- */
+  .note{
+    font-size: 16px;
+    line-height: 1.9;
+    color: var(--ink);
+    column-count: 2;
+    column-gap: 32px;
+  }
+
+  .note p{ margin: 0 0 1em; }
+
+  .note::first-letter{
+    float: left;
+    font-size: 58px;
+    line-height: .82;
+    font-weight: 900;
+    padding: 4px 8px 0 0;
+    color: var(--accent);
+  }
+
+  .note .sign{
+    text-align: right;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 13px;
+    column-span: all;
+    margin-top: 8px;
+  }
+
+  /* ---- 本月选书 ---- */
+  .booklist{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .book{
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 18px;
+    padding: 20px 0;
+    border-top: 1px solid var(--rule);
+    transition: background-color .18s ease-out;
+  }
+
+  .book:first-child{ border-top: none; }
+
+  .book:hover{ background: var(--paper-shade); }
+
+  .book .num{
+    font-family: Georgia, serif;
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .book h3{
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .01em;
+  }
+
+  .book .author{
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: .04em;
+    margin-bottom: 8px;
+  }
+
+  .book .rec{
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    border-left: 2px solid var(--rule);
+    padding-left: 12px;
+  }
+
+  /* ---- 店址与营业时间 ---- */
+  .info-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  .info-block .label{
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+
+  .info-block p{
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+
+  .info-block .muted{
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    margin-top: 6px;
+  }
+
+  /* ---- 页脚：印章式落款 ---- */
+  footer{
+    position: relative;
+    z-index: 1;
+    margin-top: 8px;
+    padding-top: 28px;
+    border-top: 3px double var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  footer .colophon{
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+
+  .stamp{
+    flex-shrink: 0;
+    width: 78px;
+    height: 78px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--accent);
+    transform: rotate(-6deg);
+    font-family: "Songti SC", serif;
+    font-weight: 900;
+    font-size: 13px;
+    letter-spacing: .06em;
+    line-height: 1.3;
+  }
+
+  /* ---- 响应式 ---- */
+  @media (max-width: 640px){
+    .page{ padding: 36px 22px 30px; margin: 0 0 48px; }
+    .masthead h1{ font-size: 42px; }
+    .note{ column-count: 1; }
+    .info-grid{ grid-template-columns: 1fr; }
+    .book{ grid-template-columns: 24px 1fr; }
+    footer{ flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <div class="masthead">
+    <p class="eyebrow">第 47 期 · 2026 夏</p>
+    <h1>浮屿书店</h1>
+    <p class="tagline">在城市的缝隙里，泊一座只属于阅读的岛</p>
+    <p class="locus">FLOATING ISLE BOOKS — 独立经营 · 每周挑书 · 只谈值得谈的书</p>
+  </div>
+
+  <section aria-label="店主手记">
+    <div class="section-head">
+      <h2>店主手记</h2>
+      <span class="no">01</span>
+    </div>
+    <div class="note" lang="zh">
+      <p>七月的雨总在打烊前半小时落下来，我把靠窗那摞《房思琪》挪进了不会被溅湿的书架，然后坐在收银台后面等雨停——这是我这个月第三次干这件事，索性把那格书架标成了"雨天专区"。</p>
+      <p>店名叫"浮屿"，是开业前一晚在浴缸里想出来的，当时觉得很文艺，后来才发现楼下水管漏水，地面常年有一小片积水没干过，客人踩过去总说"这店名挺应景"。我没解释，由着他们以为是我故意设计的。</p>
+      <p>这个月进的新书里有一半是我自己想读的，另一半是常客老周点名要的——他上个月读完《活着》，在留言本上只写了两个字："服了。"我把那页留言本折了角，没舍得撕。</p>
+      <p class="sign">— 阿岛，浮屿书店第 3 年</p>
+    </div>
+  </section>
+
+  <section aria-label="本月选书">
+    <div class="section-head">
+      <h2>本月选书</h2>
+      <span class="no">02</span>
+    </div>
+    <div class="booklist">
+      <div class="book">
+        <span class="num">01</span>
+        <div>
+          <h3>一个人的朝圣</h3>
+          <p class="author">蕾秋·乔伊斯 著</p>
+          <p class="rec">全世界都在催促他停下，他偏要走到底。</p>
+        </div>
+      </div>
+      <div class="book">
+        <span class="num">02</span>
+        <div>
+          <h3>岛上书店</h3>
+          <p class="author">加布瑞埃拉·泽文 著</p>
+          <p class="rec">没有谁是一座孤岛，除非他自己把书店的门关上。</p>
+        </div>
+      </div>
+      <div class="book">
+        <span class="num">03</span>
+        <div>
+          <h3>房思琪的初恋乐园</h3>
+          <p class="author">林奕含 著</p>
+          <p class="rec">读完不会舒服，但值得记住。</p>
+        </div>
+      </div>
+      <div class="book">
+        <span class="num">04</span>
+        <div>
+          <h3>活着</h3>
+          <p class="author">余华 著</p>
+          <p class="rec">苦难写得越轻，读的人心越沉。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="店址与营业时间">
+    <div class="section-head">
+      <h2>找到我们</h2>
+      <span class="no">03</span>
+    </div>
+    <div class="info-grid">
+      <div class="info-block">
+        <p class="label">Address</p>
+        <p>上海市徐汇区永康路 43 号 2 楼<br>（近湖南路口，蓝色木门，需上楼）</p>
+        <p class="muted">附近无停车位，建议步行或骑行前往</p>
+      </div>
+      <div class="info-block">
+        <p class="label">Hours</p>
+        <p>周二至周日　11:00 – 20:00<br>周一休息（陈列除尘日）</p>
+        <p class="muted">雨天可能因漏水提前打烊，请提前致电确认</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="colophon">
+      浮屿书店 · 独立经营，不打折、不办卡<br>
+      微信 fuyu_books · 小红书 @浮屿书店<br>
+      本月刊由店主本人编写与校对
+    </p>
+    <div class="stamp">浮屿<br>藏书之印</div>
+  </footer>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>浮屿书店 · 本月书讯</title>
+<meta name="description" content="浮屿书店店主手记与本月选书,巷子深处的一间独立书店。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700;900&family=Playfair+Display:ital,wght@0,500;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f5f0e3;
+    --paper-deep: #e6ddc8;
+    --ink: #1d1810;
+    --ink-soft: #5c5344;
+    --ink-faint: #8b8271;
+    --accent: #2f4459;
+    --rule: rgba(29, 24, 16, 0.22);
+    --rule-soft: rgba(29, 24, 16, 0.12);
+    --shadow-tint: rgba(35, 26, 12, 0.28);
+    --serif-cjk: "Noto Serif SC", "Songti SC", serif;
+    --serif-latin: "Playfair Display", "Noto Serif SC", serif;
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+    --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px; --sp-24: 96px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper-deep);
+    color: var(--ink);
+    font-family: var(--serif-cjk);
+    -webkit-font-smoothing: antialiased;
+    padding: var(--sp-16) var(--sp-6) var(--sp-24);
+  }
+
+  body::before{
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.5), transparent 60%),
+      radial-gradient(ellipse at 90% 100%, rgba(0,0,0,0.06), transparent 55%);
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--paper);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 40px 70px -30px var(--shadow-tint),
+      0 4px 0 var(--paper-deep);
+    padding: var(--sp-16) var(--sp-16);
+    z-index: 1;
+  }
+
+  .page::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  section, header.masthead, footer.colophon { position: relative; z-index: 1; }
+
+  /* ---- Masthead ---- */
+
+  .masthead__meta{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+
+  .masthead__title{
+    font-family: var(--serif-cjk);
+    font-weight: 900;
+    font-size: clamp(52px, 9vw, 100px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin: var(--sp-6) 0 var(--sp-3);
+    color: var(--ink);
+  }
+
+  .masthead__tagline{
+    font-size: 19px;
+    color: var(--ink-soft);
+    margin: 0 0 var(--sp-8);
+    line-height: 1.7;
+  }
+
+  .masthead__rule{
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* ---- Section head ---- */
+
+  .section-head{
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-4);
+    margin: var(--sp-16) 0 var(--sp-8);
+    padding-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .section-head__num{
+    font-family: var(--serif-latin);
+    font-style: italic;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+  }
+
+  .section-head__title{
+    font-size: 25px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  /* ---- 店主手记 ---- */
+
+  .note__cols{
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: var(--sp-16);
+    align-items: start;
+  }
+
+  .note__body p{
+    font-size: 16.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    margin: 0 0 var(--sp-4);
+  }
+
+  .note__body p.note__lead::first-letter{
+    float: left;
+    font-family: var(--serif-latin);
+    font-weight: 700;
+    font-size: 4.4em;
+    line-height: 0.8;
+    padding: 6px 10px 0 0;
+    color: var(--accent);
+  }
+
+  .note__sign{
+    margin-top: var(--sp-6) !important;
+    text-align: right;
+    color: var(--ink-soft) !important;
+    font-size: 14.5px !important;
+  }
+
+  .note__pull{
+    border-left: 2px solid var(--accent);
+    padding: var(--sp-1) 0 var(--sp-1) var(--sp-6);
+    font-size: 20px;
+    line-height: 1.7;
+    color: var(--accent);
+    align-self: center;
+  }
+
+  /* ---- 本月选书 ---- */
+
+  .picks__list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--sp-16);
+  }
+
+  .picks__item{
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: var(--sp-4);
+    padding: var(--sp-6) 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .picks__item:nth-child(-n+2){
+    border-top: none;
+  }
+
+  .picks__index{
+    font-family: var(--serif-latin);
+    font-weight: 700;
+    font-size: 34px;
+    color: var(--ink-faint);
+    line-height: 1;
+  }
+
+  .picks__body h3{
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0 0 var(--sp-1);
+    color: var(--ink);
+  }
+
+  .picks__byline{
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    margin: 0 0 var(--sp-3);
+  }
+
+  .picks__note{
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  /* ---- 店铺信息 ---- */
+
+  .visit__cols{
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--sp-16);
+  }
+
+  .visit__block h3{
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin: 0 0 var(--sp-4);
+    font-family: var(--serif-cjk);
+  }
+
+  .visit__block p{
+    font-size: 16px;
+    line-height: 1.75;
+    margin: 0 0 var(--sp-4);
+    color: var(--ink);
+  }
+
+  .visit__note{
+    font-size: 14px !important;
+    color: var(--ink-soft) !important;
+    line-height: 1.7 !important;
+  }
+
+  .visit__hours{
+    margin: 0;
+    padding: 0;
+  }
+
+  .visit__hours div{
+    display: flex;
+    justify-content: space-between;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: 15px;
+  }
+
+  .visit__hours div:last-child{ border-bottom: none; }
+
+  .visit__hours dt{ color: var(--ink); font-weight: 600; }
+  .visit__hours dd{ margin: 0; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  /* ---- Colophon ---- */
+
+  .colophon{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: var(--sp-16);
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+  }
+
+  /* ---- Responsive ---- */
+
+  @media (max-width: 720px){
+    body{ padding: var(--sp-8) var(--sp-3) var(--sp-16); }
+    .page{ padding: var(--sp-8) var(--sp-4); }
+    .masthead__meta{ flex-direction: column; gap: var(--sp-1); }
+    .note__cols{ grid-template-columns: 1fr; gap: var(--sp-6); }
+    .note__pull{ border-left: none; border-top: 2px solid var(--accent); padding: var(--sp-4) 0 0; }
+    .picks__list{ grid-template-columns: 1fr; }
+    .picks__item:nth-child(-n+2){ border-top: 1px solid var(--rule-soft); }
+    .picks__item:first-child{ border-top: none; }
+    .visit__cols{ grid-template-columns: 1fr; gap: var(--sp-8); }
+  }
+
+  @media print{
+    body{ background: #fff; padding: 0; }
+    .page{ box-shadow: none; max-width: none; }
+    .page::after{ display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="masthead">
+      <div class="masthead__meta">
+        <span>浮屿书店 · 布告</span>
+        <span>二〇二六年七月 · 第〇七期</span>
+      </div>
+      <h1 class="masthead__title">浮屿书店</h1>
+      <p class="masthead__tagline">巷子最深处,一座纸做的岛。</p>
+      <div class="masthead__rule"></div>
+    </header>
+
+    <section aria-labelledby="note-heading">
+      <div class="section-head">
+        <span class="section-head__num">01</span>
+        <h2 id="note-heading" class="section-head__title">店主手记</h2>
+      </div>
+      <div class="note__cols">
+        <div class="note__body">
+          <p class="note__lead">入伏前那场雨后,进的一批旧书返潮返得厉害,摊在后院晾了三天才敢上架。有位常客翻开一本八十年代的诗集,说纸页的霉味让她想起外婆那口樟木箱——她买走了,没打折,我也没提折扣的事。</p>
+          <p>开书店这几年慢慢明白,卖的其实不是纸和油墨,是给人一个理由,在书架前站定五分钟,把手机放回口袋。这个月照旧选四本,都是我这阵子枕边翻烂了角的。不追畅销榜,只认自己真读完的。</p>
+          <p class="note__sign">— 阿岛,浮屿书店店主</p>
+        </div>
+        <p class="note__pull">「卖的其实不是纸和油墨,是给人一个理由,在书架前站定五分钟。」</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="picks-heading">
+      <div class="section-head">
+        <span class="section-head__num">02</span>
+        <h2 id="picks-heading" class="section-head__title">本月选书</h2>
+      </div>
+      <ul class="picks__list">
+        <li class="picks__item">
+          <span class="picks__index">01</span>
+          <div class="picks__body">
+            <h3>我的阿勒泰</h3>
+            <p class="picks__byline">李娟 · 散文</p>
+            <p class="picks__note">把苦日子写得有风有光,读完总想收拾行李去放羊。</p>
+          </div>
+        </li>
+        <li class="picks__item">
+          <span class="picks__index">02</span>
+          <div class="picks__body">
+            <h3>月亮与六便士</h3>
+            <p class="picks__byline">毛姆 · 小说</p>
+            <p class="picks__note">中年人抛家弃业去画画的故事,读起来比想象中更凉薄。</p>
+          </div>
+        </li>
+        <li class="picks__item">
+          <span class="picks__index">03</span>
+          <div class="picks__body">
+            <h3>送你一颗子弹</h3>
+            <p class="picks__byline">刘瑜 · 杂文</p>
+            <p class="picks__note">毒舌又清醒,适合被生活磨钝的时候翻两页。</p>
+          </div>
+        </li>
+        <li class="picks__item">
+          <span class="picks__index">04</span>
+          <div class="picks__body">
+            <h3>岛上书店</h3>
+            <p class="picks__byline">加·泽文 · 小说</p>
+            <p class="picks__note">写书店的书里最不做作的一本,店里常客几乎人手一册。</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="visit-heading">
+      <div class="section-head">
+        <span class="section-head__num">03</span>
+        <h2 id="visit-heading" class="section-head__title">店铺信息</h2>
+      </div>
+      <div class="visit__cols">
+        <div class="visit__block">
+          <h3>地址</h3>
+          <p>上海市愚园路 1088 弄 3 号<br>近江苏路地铁站 2 号口,步行约六分钟</p>
+          <p class="visit__note">〔店内常驻一只三花猫,认生但不咬人。〕</p>
+        </div>
+        <div class="visit__block">
+          <h3>开放时间</h3>
+          <dl class="visit__hours">
+            <div><dt>周二至周五</dt><dd>11:00–20:00</dd></div>
+            <div><dt>周六 · 周日</dt><dd>10:00–21:00</dd></div>
+            <div><dt>周一</dt><dd>店休</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <span>浮屿书店 · 只卖读过的书</span>
+      <span>01</span>
+    </footer>
+
+  </div>
+
+<script>
+  (function(){
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var targets = document.querySelectorAll('header.masthead, section, footer.colophon');
+    targets.forEach(function(el){
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(14px)';
+    });
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting){
+          entry.target.style.transition = 'opacity .7s ease-out, transform .7s ease-out';
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    targets.forEach(function(el){ io.observe(el); });
+  })();
+</script>
+</body>
+</html>
