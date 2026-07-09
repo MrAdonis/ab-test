@@ -1,0 +1,31 @@
+# t49 确定性检查（2026-07-08，主代理 grep 工作区实际文件，不采信子代理自报）
+--- memlab-49-a1 ---
+memlab-49-a1/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-a1/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
+--- memlab-49-a2 ---
+memlab-49-a2/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-a2/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
+--- memlab-49-a3 ---
+memlab-49-a3/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-a3/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
+--- memlab-49-b1 ---
+memlab-49-b1/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-b1/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
+--- memlab-49-b2 ---
+memlab-49-b2/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-b2/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
+--- memlab-49-b3 ---
+memlab-49-b3/memory/project_deploy_target.md:5:superseded_by: project_deploy_target_workers.md
+memlab-49-b3/memory/project_deploy_target_workers.md:5:supersedes: project_deploy_target.md
+旧文件 confidence: confidence: low
+MEMORY.md superseded 标注: 1
