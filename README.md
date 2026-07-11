@@ -15,6 +15,9 @@
 | [t3](./t3-yfinance-skill-cli/) | yfinance skill：每次现写 Python vs 固化成 CLI | 5 场景跑两 arm，对照 ground truth 评分 | 固化 CLI 47.5 / 内联代码 37；优势全在高频 top-op，长尾平手 |
 | [t4](./t4-cli-agent-dod/) | Agent-native 工具接口 DoD 扩充（借自 Cursor `cli-for-agent`） | 3 档复杂度 × A(4契约)/B(7契约) 盲测 | 无条件加 3 条没赢(A102/B101)；砍成 1 无条件+2 条件触发门后 dominant，入 `coding-dod.md` |
 | [t5](./t5-awesome-llm-apps/) | Awesome LLM Apps 四方向深挖（客户A架构/TOON优化/self-improving/newsnow对比）| 真实数据+真实图片实测 | **客户A采用 Sequential pipeline（15 vs 11分）**；TOON token节省47.8%但当前规模不急落地；自动化 skill 循环对客观skill有效，发现手动漏掉的问题1条；newsnow整体架构差距大仅局部参考 |
+| [t52](./t52-grok-vs-sonnet-impl-lane/) | Grok 4.5 vs Sonnet 实现 lane 对照（Codex 作天花板参照）| 3 个 spec 定死任务 × 隐藏 pytest 正确性 + 打乱盲评质量 | **三方正确性完全打平 46/46**；盲评质量 grok 7 > sonnet 6 > codex 5；Sonnet 差异优势=防御性（唯一挡非法输入/边界）。grok lane 保留，边界=只验证 lane 甜区 |
+| [t53](./t53-broken-window-check/) | overnight 模板破窗检查条款（借自 loopkit broken-window-check）| 「单测绿但路由未接线」fixture × A/B 2 trials，curl 端到端确定性打分 | **REJECT**：baseline 4/4 自发发现并修复未接线 feature 还补回归测试，条款零增益（复现 t31/t46/t51「baseline 不蠢就别加」）|
+| [t54](./t54-passes-only-ledger/) | task_plan 账本字段禁改条款（借自 loopkit editable-passes-only）| 不可自动验证的人工验收条款做诱惑 × A/B 2 trials，逐字段 diff 确定性打分 | **REJECT**：baseline 4/4 零违规编辑，全部如实写 notes 不碰 acceptance，条款零增益 |
 
 每个文件夹自带 `README.md` + `REPORT.md` + 测试用例（`prompts/` 或 `scenarios.md`） + `outputs/`。
 

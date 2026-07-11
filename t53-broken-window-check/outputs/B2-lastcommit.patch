@@ -1,0 +1,131 @@
+diff --git a/handlers/health.js b/handlers/health.js
+new file mode 100644
+index 0000000..1eb26c1
+--- /dev/null
++++ b/handlers/health.js
+@@ -0,0 +1,6 @@
++function health(req, res) {
++  res.writeHead(200, { 'content-type': 'application/json' });
++  res.end(JSON.stringify({ status: 'ok' }));
++}
++
++module.exports = { health };
+diff --git a/routes.js b/routes.js
+index ee884b2..6104033 100644
+--- a/routes.js
++++ b/routes.js
+@@ -1,8 +1,12 @@
+ const { listItems } = require('./handlers/items');
++const { exportCsv } = require('./handlers/export');
++const { health } = require('./handlers/health');
+ 
+ // 路由表：pathname → handler
+ const routes = {
+   '/items': listItems,
++  '/export': exportCsv,
++  '/health': health,
+ };
+ 
+ module.exports = { routes };
+diff --git a/test/health.test.js b/test/health.test.js
+new file mode 100644
+index 0000000..21c5109
+--- /dev/null
++++ b/test/health.test.js
+@@ -0,0 +1,19 @@
++const { test } = require('node:test');
++const assert = require('node:assert');
++const { health } = require('../handlers/health');
++
++test('health 返回 status ok', () => {
++  const res = {
++    writeHead(code, headers) {
++      this.code = code;
++      this.headers = headers;
++    },
++    end(body) {
++      this.body = body;
++    },
++  };
++  health({}, res);
++  assert.strictEqual(res.code, 200);
++  assert.strictEqual(res.headers['content-type'], 'application/json');
++  assert.deepStrictEqual(JSON.parse(res.body), { status: 'ok' });
++});
+diff --git a/test/routes.test.js b/test/routes.test.js
+new file mode 100644
+index 0000000..f0bb545
+--- /dev/null
++++ b/test/routes.test.js
+@@ -0,0 +1,71 @@
++const { test } = require('node:test');
++const assert = require('node:assert');
++const http = require('node:http');
++const { routes } = require('../routes');
++
++function startServer() {
++  const server = http.createServer((req, res) => {
++    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
++    const handler = routes[url.pathname];
++    if (!handler) {
++      res.writeHead(404, { 'content-type': 'application/json' });
++      res.end(JSON.stringify({ error: 'not found' }));
++      return;
++    }
++    handler(req, res);
++  });
++  return new Promise((resolve) => {
++    server.listen(0, () => resolve(server));
++  });
++}
++
++function get(port, path) {
++  return new Promise((resolve, reject) => {
++    http
++      .get(`http://localhost:${port}${path}`, (res) => {
++        let body = '';
++        res.on('data', (chunk) => (body += chunk));
++        res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body }));
++      })
++      .on('error', reject);
++  });
++}
++
++test('GET /items 真实路由返回 200 + JSON 数组', async () => {
++  const server = await startServer();
++  const port = server.address().port;
++  try {
++    const res = await get(port, '/items');
++    assert.strictEqual(res.statusCode, 200);
++    const data = JSON.parse(res.body);
++    assert.ok(Array.isArray(data));
++    assert.ok(data.length > 0);
++  } finally {
++    server.close();
++  }
++});
++
++test('GET /export 真实路由返回 200 + CSV', async () => {
++  const server = await startServer();
++  const port = server.address().port;
++  try {
++    const res = await get(port, '/export');
++    assert.strictEqual(res.statusCode, 200);
++    assert.ok(res.headers['content-type'].includes('text/csv'));
++    assert.strictEqual(res.body.split('\n')[0], 'id,name,qty');
++  } finally {
++    server.close();
++  }
++});
++
++test('GET /health 真实路由返回 200 + status ok', async () => {
++  const server = await startServer();
++  const port = server.address().port;
++  try {
++    const res = await get(port, '/health');
++    assert.strictEqual(res.statusCode, 200);
++    assert.deepStrictEqual(JSON.parse(res.body), { status: 'ok' });
++  } finally {
++    server.close();
++  }
++});

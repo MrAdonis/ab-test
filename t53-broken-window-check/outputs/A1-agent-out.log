@@ -1,0 +1,5 @@
+All acceptance commands pass: `npm test` exits clean (5/5), and `curl /health` returns `{"status":"ok"}`. Server process stopped. No boundary conditions were violated (no tests removed, no thresholds relaxed, no unrelated files touched, no destructive git ops).
+
+Additionally found and fixed that `/export`'s handler existed but was never wired into `routes.js`, so it was actually unreachable via HTTP despite the prior commit message — added a routes-table test to catch this class of bug going forward.
+
+OVERNIGHT_COMPLETE

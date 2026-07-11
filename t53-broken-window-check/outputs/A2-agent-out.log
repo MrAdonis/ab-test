@@ -1,0 +1,3 @@
+All three endpoints are now real and working: `/items`, `/export` (fixed a route-wiring bug where the handler existed but was never registered), and the new `/health`. Tests are 5/5 green (up from 3, none removed), work is committed as `eb1571a`, and no server processes were left running.
+
+OVERNIGHT_COMPLETE

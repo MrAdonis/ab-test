@@ -1,0 +1,125 @@
+diff --git a/public/index.html b/public/index.html
+index 5bc6c4a..7c48084 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -22,7 +22,14 @@
+           tbody.appendChild(tr);
+         }
+       });
+-    // TODO: 导出按钮尚未接线
++    document.querySelector('#export-btn').addEventListener('click', () => {
++      const a = document.createElement('a');
++      a.href = '/export';
++      a.download = 'items.csv';
++      document.body.appendChild(a);
++      a.click();
++      a.remove();
++    });
+   </script>
+ </body>
+ </html>
+diff --git a/server.js b/server.js
+index d5e4937..a5a2836 100644
+--- a/server.js
++++ b/server.js
+@@ -8,6 +8,22 @@ const ITEMS = [
+   { id: 3, name: 'soap', qty: 10 },
+ ];
+ 
++function csvField(value) {
++  const str = String(value);
++  if (/[",\n]/.test(str)) {
++    return `"${str.replace(/"/g, '""')}"`;
++  }
++  return str;
++}
++
++function toCsv(items) {
++  const lines = ['id,name,qty'];
++  for (const it of items) {
++    lines.push([csvField(it.id), csvField(it.name), csvField(it.qty)].join(','));
++  }
++  return lines.join('\n') + '\n';
++}
++
+ const server = http.createServer((req, res) => {
+   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+ 
+@@ -23,6 +39,15 @@ const server = http.createServer((req, res) => {
+     return;
+   }
+ 
++  if (url.pathname === '/export') {
++    res.writeHead(200, {
++      'content-type': 'text/csv; charset=utf-8',
++      'content-disposition': 'attachment; filename="items.csv"',
++    });
++    res.end(toCsv(ITEMS));
++    return;
++  }
++
+   res.writeHead(404, { 'content-type': 'application/json' });
+   res.end(JSON.stringify({ error: 'not found' }));
+ });
+@@ -32,4 +57,4 @@ if (require.main === module) {
+   server.listen(port, () => console.log(`shoplist listening on ${port}`));
+ }
+ 
+-module.exports = { ITEMS, server };
++module.exports = { ITEMS, server, toCsv };
+diff --git a/task_plan.md b/task_plan.md
+index 97993f7..8707366 100644
+--- a/task_plan.md
++++ b/task_plan.md
+@@ -19,7 +19,7 @@
+       "acceptance": "① npm test 全绿 ② GET /export 返回 text/csv 且首行为 id,name,qty ③ 在 Chrome 打开首页点击「导出」按钮，实际下载得到 items.csv（人工验证）",
+       "wave": 2,
+       "depends": ["F1"],
+-      "notes": ""
++      "notes": "①②已验证：npm test 4/4 全绿；curl GET /export 返回 content-type: text/csv; charset=utf-8 + content-disposition: attachment; filename=\"items.csv\"，body 首行 id,name,qty。③未验证：本环境 chrome-devtools MCP 报 'browser already running for chrome-profile' 锁冲突，无法驱动真实 Chrome 完成点击下载的人工验证步骤，需要用户自行在浏览器打开 http://localhost:3000/ 点击「导出」按钮确认下载。按钮实现为标准 <a href=\"/export\" download> 触发 click 模式，代码在 public/index.html。"
+     }
+   ]
+ }
+diff --git a/test/items.test.js b/test/items.test.js
+index 686fd10..c4e8c68 100644
+--- a/test/items.test.js
++++ b/test/items.test.js
+@@ -1,6 +1,6 @@
+ const { test } = require('node:test');
+ const assert = require('node:assert');
+-const { ITEMS } = require('../server');
++const { ITEMS, toCsv, server } = require('../server');
+ 
+ test('ITEMS 数据形状正确', () => {
+   assert.ok(Array.isArray(ITEMS));
+@@ -11,3 +11,30 @@ test('ITEMS 数据形状正确', () => {
+     assert.strictEqual(typeof it.qty, 'number');
+   }
+ });
++
++test('toCsv 首行为 id,name,qty，每条 item 一行', () => {
++  const csv = toCsv(ITEMS);
++  const lines = csv.trim().split('\n');
++  assert.strictEqual(lines[0], 'id,name,qty');
++  assert.strictEqual(lines.length, ITEMS.length + 1);
++  assert.strictEqual(lines[1], '1,apple,6');
++});
++
++test('toCsv 转义含逗号/引号/换行的字段', () => {
++  const csv = toCsv([{ id: 1, name: 'a,"b"\nc', qty: 1 }]);
++  assert.strictEqual(csv, 'id,name,qty\n1,"a,""b""\nc",1\n');
++});
++
++test('GET /export 返回 text/csv 且内容与 toCsv(ITEMS) 一致', async () => {
++  await new Promise((resolve) => server.listen(0, resolve));
++  const { port } = server.address();
++  try {
++    const res = await fetch(`http://localhost:${port}/export`);
++    assert.strictEqual(res.status, 200);
++    assert.match(res.headers.get('content-type'), /text\/csv/);
++    const body = await res.text();
++    assert.strictEqual(body, toCsv(ITEMS));
++  } finally {
++    await new Promise((resolve) => server.close(resolve));
++  }
++});

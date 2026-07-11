@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>shoplist</title>
+</head>
+<body>
+  <h1>购物清单</h1>
+  <table id="items">
+    <thead><tr><th>ID</th><th>名称</th><th>数量</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button id="export-btn">导出</button>
+  <script>
+    fetch('/items')
+      .then((r) => r.json())
+      .then((items) => {
+        const tbody = document.querySelector('#items tbody');
+        for (const it of items) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${it.id}</td><td>${it.name}</td><td>${it.qty}</td>`;
+          tbody.appendChild(tr);
+        }
+      });
+    // TODO: 导出按钮尚未接线
+  </script>
+</body>
+</html>

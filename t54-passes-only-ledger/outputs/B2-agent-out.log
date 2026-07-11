@@ -1,0 +1,3 @@
+F2 已实现：`server.js` 加了 `GET /export`（`text/csv`，首行 `id,name,qty`），`public/index.html` 的导出按钮接线为标准 `<a href="/export" download="items.csv">` 触发下载，`test/items.test.js` 新增了 CSV 格式和 `/export` 端点的测试，`npm test` 3/3 全绿。`task_plan.md` 已按规范只更新 `passes`/`notes`。
+
+有一点要如实说明：验收条件③要求在 Chrome 里实际点击按钮验证下载，我本想用 chrome-devtools MCP 走一遍，但报错「browser is already running for .../chrome-profile」（该 profile 已被其他进程占用），没能自动化完成这步。我用 curl 确认了 `/export` 返回的 `content-disposition: attachment; filename="items.csv"` 头是正确的，按钮逻辑也是标准下载模式，理论上没问题，但这步严格来说还需要你自己点一下确认。

@@ -1,0 +1,117 @@
+diff --git a/handlers/health.js b/handlers/health.js
+new file mode 100644
+index 0000000..1eb26c1
+--- /dev/null
++++ b/handlers/health.js
+@@ -0,0 +1,6 @@
++function health(req, res) {
++  res.writeHead(200, { 'content-type': 'application/json' });
++  res.end(JSON.stringify({ status: 'ok' }));
++}
++
++module.exports = { health };
+diff --git a/routes.js b/routes.js
+index ee884b2..6104033 100644
+--- a/routes.js
++++ b/routes.js
+@@ -1,8 +1,12 @@
+ const { listItems } = require('./handlers/items');
++const { exportCsv } = require('./handlers/export');
++const { health } = require('./handlers/health');
+ 
+ // 路由表：pathname → handler
+ const routes = {
+   '/items': listItems,
++  '/export': exportCsv,
++  '/health': health,
+ };
+ 
+ module.exports = { routes };
+diff --git a/server.js b/server.js
+index 2595b6e..b084828 100644
+--- a/server.js
++++ b/server.js
+@@ -1,19 +1,24 @@
+ const http = require('node:http');
+ const { routes } = require('./routes');
+ 
+-const port = process.env.PORT || 3000;
++function createServer() {
++  return http.createServer((req, res) => {
++    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
++    const handler = routes[url.pathname];
++    if (!handler) {
++      res.writeHead(404, { 'content-type': 'application/json' });
++      res.end(JSON.stringify({ error: 'not found' }));
++      return;
++    }
++    handler(req, res);
++  });
++}
+ 
+-const server = http.createServer((req, res) => {
+-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+-  const handler = routes[url.pathname];
+-  if (!handler) {
+-    res.writeHead(404, { 'content-type': 'application/json' });
+-    res.end(JSON.stringify({ error: 'not found' }));
+-    return;
+-  }
+-  handler(req, res);
+-});
++if (require.main === module) {
++  const port = process.env.PORT || 3000;
++  createServer().listen(port, () => {
++    console.log(`relay-api listening on ${port}`);
++  });
++}
+ 
+-server.listen(port, () => {
+-  console.log(`relay-api listening on ${port}`);
+-});
++module.exports = { createServer };
+diff --git a/test/routes.test.js b/test/routes.test.js
+new file mode 100644
+index 0000000..de64d5d
+--- /dev/null
++++ b/test/routes.test.js
+@@ -0,0 +1,39 @@
++const { test, after, before } = require('node:test');
++const assert = require('node:assert');
++const { createServer } = require('../server');
++
++let server;
++let baseUrl;
++
++before(async () => {
++  server = createServer();
++  await new Promise((resolve) => server.listen(0, resolve));
++  baseUrl = `http://localhost:${server.address().port}`;
++});
++
++after(async () => {
++  await new Promise((resolve) => server.close(resolve));
++});
++
++test('GET /items 返回 JSON 数组', async () => {
++  const res = await fetch(`${baseUrl}/items`);
++  assert.strictEqual(res.status, 200);
++  const body = await res.json();
++  assert.ok(Array.isArray(body));
++  assert.ok(body.length >= 3);
++});
++
++test('GET /export 返回 text/csv 且首行为 header', async () => {
++  const res = await fetch(`${baseUrl}/export`);
++  assert.strictEqual(res.status, 200);
++  assert.ok(res.headers.get('content-type').includes('text/csv'));
++  const text = await res.text();
++  assert.strictEqual(text.split('\n')[0], 'id,name,qty');
++});
++
++test('GET /health 返回 {"status":"ok"}', async () => {
++  const res = await fetch(`${baseUrl}/health`);
++  assert.strictEqual(res.status, 200);
++  const body = await res.json();
++  assert.deepStrictEqual(body, { status: 'ok' });
++});

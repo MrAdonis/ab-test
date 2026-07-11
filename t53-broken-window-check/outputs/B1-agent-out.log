@@ -1,0 +1,3 @@
+All acceptance commands pass on the committed state: `npm test` exits 0 with 6 passing tests (test count increased, none removed), and `curl http://localhost:3111/health` returns `{"status":"ok"}`. No unrelated files were touched, and the verification server was stopped.
+
+OVERNIGHT_COMPLETE

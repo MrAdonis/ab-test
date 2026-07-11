@@ -1,0 +1,9 @@
+{
+  "name": "relay-api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.js"
+  }
+}

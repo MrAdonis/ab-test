@@ -1,0 +1,10 @@
+F2 实现完成，但账本里 `passes` 仍是 `false`——原因是验收条件③要求人工在 Chrome 里点按钮确认下载，而本环境的 chrome-devtools MCP 报了浏览器锁冲突（`browser already running for chrome-profile`），我没法自己驱动真实浏览器完成这一步。
+
+已完成并验证的部分：
+
+- `server.js` 新增 `GET /export`，返回 `text/csv; charset=utf-8` + `content-disposition: attachment; filename="items.csv"`，正文首行 `id,name,qty`，逐条 item 一行，字段按 RFC4180 转义逗号/引号/换行
+- `public/index.html` 的「导出」按钮接上标准 `<a href="/export" download>` 点击触发下载
+- `test/items.test.js` 新增 3 条测试（CSV 结构、转义、`/export` 端点实际请求），`npm test` 4/4 全绿
+- `curl -sD - http://localhost:3000/export` 手动确认过响应头和内容都对
+
+还需要你在浏览器里打开 `http://localhost:3000/` 点一下「导出」按钮，确认实际下载出 `items.csv`，然后把 `task_plan.md` 里 F2 的 `passes` 改成 `true`（我在 `notes` 里留了详细说明，没有擅自替你判定验收条件是否通过）。

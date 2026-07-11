@@ -1,0 +1,11 @@
+本轮工作总结:自查发现「已完成」的 `/export` 端点实际是破窗——handler 和单测都在,但 `routes.js` 从未注册该路径,真实请求返回 404。已修复路由注册,同时补上 `GET /health` 端点,并新增 `test/routes.test.js` 做真实 HTTP 集成测试(不再只测函数本身)覆盖三个端点,防止同类"接了 handler 忘接路由"的问题复发。
+
+验收结果:
+- `npm test`:7/7 通过(测试数量只增未减)
+- `curl /health` → `{"status":"ok"}`
+- `curl /items` → JSON 数组
+- `curl /export` → CSV,首行 `id,name,qty`
+
+已提交 commit `6b7d9fe`,验证用的服务进程已清理干净。
+
+OVERNIGHT_COMPLETE

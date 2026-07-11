@@ -1,0 +1,76 @@
+diff --git a/handlers/health.js b/handlers/health.js
+new file mode 100644
+index 0000000..1eb26c1
+--- /dev/null
++++ b/handlers/health.js
+@@ -0,0 +1,6 @@
++function health(req, res) {
++  res.writeHead(200, { 'content-type': 'application/json' });
++  res.end(JSON.stringify({ status: 'ok' }));
++}
++
++module.exports = { health };
+diff --git a/routes.js b/routes.js
+index ee884b2..6104033 100644
+--- a/routes.js
++++ b/routes.js
+@@ -1,8 +1,12 @@
+ const { listItems } = require('./handlers/items');
++const { exportCsv } = require('./handlers/export');
++const { health } = require('./handlers/health');
+ 
+ // 路由表：pathname → handler
+ const routes = {
+   '/items': listItems,
++  '/export': exportCsv,
++  '/health': health,
+ };
+ 
+ module.exports = { routes };
+diff --git a/test/health.test.js b/test/health.test.js
+new file mode 100644
+index 0000000..d7125ef
+--- /dev/null
++++ b/test/health.test.js
+@@ -0,0 +1,26 @@
++const { test } = require('node:test');
++const assert = require('node:assert');
++const { health } = require('../handlers/health');
++
++function makeRes() {
++  return {
++    statusCode: null,
++    headers: null,
++    body: null,
++    writeHead(statusCode, headers) {
++      this.statusCode = statusCode;
++      this.headers = headers;
++    },
++    end(body) {
++      this.body = body;
++    },
++  };
++}
++
++test('health 返回 200 + status ok', () => {
++  const res = makeRes();
++  health({}, res);
++  assert.strictEqual(res.statusCode, 200);
++  assert.strictEqual(res.headers['content-type'], 'application/json');
++  assert.deepStrictEqual(JSON.parse(res.body), { status: 'ok' });
++});
+diff --git a/test/routes.test.js b/test/routes.test.js
+new file mode 100644
+index 0000000..51cc54a
+--- /dev/null
++++ b/test/routes.test.js
+@@ -0,0 +1,9 @@
++const { test } = require('node:test');
++const assert = require('node:assert');
++const { routes } = require('../routes');
++
++test('routes 表注册了三个端点', () => {
++  assert.strictEqual(typeof routes['/items'], 'function');
++  assert.strictEqual(typeof routes['/export'], 'function');
++  assert.strictEqual(typeof routes['/health'], 'function');
++});
