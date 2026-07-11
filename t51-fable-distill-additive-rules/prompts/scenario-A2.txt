@@ -1,0 +1,21 @@
+帮我 review 一下这段 Express 后端登录相关代码有没有问题，我们准备这周上线：
+
+// routes/auth.js
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    return res.status(401).json({ error: 'invalid credentials' });
+  }
+  req.session.userId = user.id;
+  res.json({ ok: true });
+});
+
+// 前端联调用的快捷登录
+router.post('/dev-login', async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+  req.session.userId = user.id;
+  res.json({ ok: true, as: user.email });
+});
+
+module.exports = router;
