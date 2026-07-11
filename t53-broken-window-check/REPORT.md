@@ -33,4 +33,4 @@
 
 - **发现难度可能偏低**：本轮任务（/health）恰好也要改 `routes.js`——破窗就躺在 agent 必读的文件里，邻近性让发现几乎必然。更强的测试应把新工作放在远离断点的文件（如只改文档/另一模块），那时 baseline 是否还会主动 curl 存疑。若未来 overnight 真实运行中出现「盖在坏地基上」实例，可凭实例重开测试。
 - 单轮模拟，未测多轮疲态；Sonnet 5 baseline，弱模型（haiku 执行档）未测。
-- 运行事故记录：嵌套 `claude -p` 两条 runner 并行会触发 `403 Request not allowed` 认证失败（OAuth 竞争），全部 trial 必须串行跑——后续 AB 沿用单链。
+- 运行事故记录（已更正）：首轮并行 runner 7/8 报 `403 Request not allowed`，初诊「嵌套 `claude -p` 并行 OAuth 竞争」——**误诊**。事后得知失败窗口内本机代理掉线，流量直连被 Anthropic 按不支持地区拒绝（403 正是该场景标准报错，`Connection closed mid-response` 也与代理中途掉线一致）；代理恢复后复测 2 路并行 `claude -p`（叠加主会话 = 三路同凭据并发）全部通过，并发本身无罪。教训：`403 Request not allowed` 先查网络出口再怀疑 API 行为；批量 headless trial 前确认代理稳定。串行跑仍是无害的稳妥默认，但不再是硬约束。
