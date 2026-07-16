@@ -1,0 +1,34 @@
+=== [A] model=opus advisor=none ===
+  exit=1  wall=2s
+  [!] 无法解析 result.json: Expecting value: line 1 column 1 (char 0)
+
+=== [B] model=sonnet advisor=none ===
+  exit=1  wall=2s
+  [!] 无法解析 result.json: Expecting value: line 1 column 1 (char 0)
+
+=== [C] model=sonnet advisor=opus ===
+  exit=0  wall=495s
+  usage: {'input_tokens': 66, 'output_tokens': 39767, 'cache_creation_input_tokens': 128622, 'cache_read_input_tokens': 4411271}
+  cost_usd: 2.6918163000000015  turns: 33
+  modelUsage: ['claude-sonnet-5']
+  ADVISOR_ACTIVE: NO —— 静默失效，本 arm 数据作废
+
+=== [D] model=sonnet advisor=fable ===
+  exit=0  wall=401s
+  usage: {'input_tokens': 62, 'output_tokens': 33040, 'cache_creation_input_tokens': 122430, 'cache_read_input_tokens': 3848284}
+  cost_usd: 2.3848512000000004  turns: 31
+  modelUsage: ['claude-sonnet-5']
+  ADVISOR_ACTIVE: NO —— 静默失效，本 arm 数据作废
+
+=== [A] model=opus advisor=none ===
+  exit=0  wall=292s
+  usage: {'input_tokens': 21, 'output_tokens': 20844, 'cache_creation_input_tokens': 98956, 'cache_read_input_tokens': 1046796}
+  cost_usd: 2.034163  turns: 11
+  modelUsage: ['claude-opus-4-8']
+
+=== [B] model=sonnet advisor=none ===
+  exit=0  wall=363s
+  usage: {'input_tokens': 42, 'output_tokens': 31609, 'cache_creation_input_tokens': 115960, 'cache_read_input_tokens': 2482321}
+  cost_usd: 1.9147172999999997  turns: 21
+  modelUsage: ['claude-sonnet-5']
+
