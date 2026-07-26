@@ -1,0 +1,196 @@
+<!doctype html>
+<!--
+  TEMPLATE: research-report (A4 纵向单页研报 / 投资备忘 / 美股小报一页纸)
+  配色: slate-mono (金融正式)  ·  约束: ../constraints.md  ·  色板: ../palettes.md
+  替换点用 {{...}} 标注；图表槽位见 .chart-slot（走 diagram skill 生成 SVG 后内联）
+  渲染: bash ../../scripts/render.sh research-report.html out.png   (PNG)
+        bash ../../scripts/render.sh research-report.html out.pdf --pdf  (PDF)
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    /* ── 字号阶 (constraints.md §3) ── */
+    --fs-display:44px; --fs-h1:35px; --fs-h2:28px; --fs-h3:22px;
+    --fs-lead:19px; --fs-body:15px; --fs-small:12px; --fs-micro:10px;
+    /* ── 字体栈 (constraints.md §2) ── */
+    --serif:"Charter","Source Serif 4","Source Han Serif SC","Songti SC","Georgia",serif;
+    --sans:"Helvetica Neue","PingFang SC",system-ui,sans-serif;
+    --mono:"SF Mono","Roboto Mono","Menlo",monospace;
+    /* ── 色板 slate-mono (palettes.md) ── */
+    --bg:#FFFFFF; --surface:#F6F7F8; --ink:#1A1D21; --ink-soft:#5A626B;
+    --accent:#0B3A5B; --up:#067647; --down:#B42318; --rule:#E3E6E9;
+    /* ── 间距基线网格 (constraints.md §6) ── */
+    --s1:8px; --s2:16px; --s3:25px; --s4:50px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility }
+  body{ background:#888; font-family:var(--serif); color:var(--ink);
+        font-size:var(--fs-body); line-height:1.7; letter-spacing:.02em }
+  .page{ width:794px; height:1123px; background:var(--bg);
+         padding:60px 70px 50px; margin:0 auto; box-sizing:border-box;
+         display:flex; flex-direction:column; overflow:hidden }
+  /* ── 通用排版 ── */
+  .eyebrow,.label{ font-family:var(--sans); font-size:var(--fs-micro);
+    letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft) }
+  .num{ font-family:var(--mono); font-variant-numeric:tabular-nums lining-nums }
+  .up{ color:var(--up) } .down{ color:var(--down) } .accent{ color:var(--accent) }
+  h1,h2,h3{ line-height:1.18; letter-spacing:-.01em; text-wrap:balance }
+  p{ text-wrap:pretty }
+
+  /* ── 页眉：报头条 ── */
+  .masthead{ display:flex; justify-content:space-between; align-items:baseline;
+    padding-bottom:var(--s2); border-bottom:2px solid var(--ink) }
+  .masthead .brand{ font-family:var(--sans); font-weight:700; font-size:var(--fs-h3);
+    letter-spacing:.02em }
+  .masthead .meta{ font-family:var(--sans); font-size:var(--fs-micro);
+    color:var(--ink-soft); text-align:right; line-height:1.5 }
+
+  /* ── 标题区 ── */
+  .head{ margin-top:var(--s3) }
+  .head .kicker{ color:var(--accent); margin-bottom:var(--s1) }
+  .head h1{ font-size:var(--fs-display); max-width:18ch }
+  .head .lead{ font-size:var(--fs-lead); line-height:1.5; color:var(--ink-soft);
+    margin-top:var(--s2); max-width:54ch }
+
+  /* ── 主栅格：正文 + 侧栏指标 (不对称, 反居中万能布局) ── */
+  .grid{ display:grid; grid-template-columns:1fr 232px; gap:var(--s4);
+    margin-top:var(--s3); flex:1; min-height:0 }
+  .body h2{ font-size:var(--fs-h3); margin:var(--s3) 0 var(--s1) }
+  .body h2:first-child{ margin-top:0 }
+  .body p{ margin-bottom:var(--s2); max-width:58ch }
+  .body p + p{ margin-top:calc(var(--s2)*-1 + var(--s1)) }
+
+  /* 引文块 */
+  .pull{ font-size:var(--fs-h3); line-height:1.35; color:var(--accent);
+    border-left:3px solid var(--accent); padding-left:var(--s2);
+    margin:var(--s3) 0; max-width:46ch }
+
+  /* ── 侧栏：KPI 指标，divide-y 不用卡片 (DENSITY 高) ── */
+  .rail .label{ display:block; padding-bottom:var(--s1);
+    border-bottom:1px solid var(--rule); margin-bottom:var(--s2) }
+  .kpi{ padding-bottom:16px; margin-bottom:16px;
+    border-bottom:1px solid var(--rule) }
+  .kpi:last-child{ border-bottom:0 }
+  .kpi .k{ font-family:var(--sans); font-size:var(--fs-micro);
+    letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft) }
+  .kpi .v{ font-family:var(--mono); font-size:var(--fs-h2); line-height:1.1;
+    margin-top:6px; font-variant-numeric:tabular-nums }
+  .kpi .d{ font-family:var(--mono); font-size:var(--fs-small); margin-top:4px }
+
+  /* ── 数据表：等宽对齐, 极简横线 ── */
+  .data{ margin-top:var(--s3); width:100% }
+  .data .label{ margin-bottom:var(--s1) }
+  table{ width:100%; border-collapse:collapse; font-size:var(--fs-small) }
+  th{ font-family:var(--sans); font-size:var(--fs-micro); letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-soft); text-align:right;
+    padding:6px 0; border-bottom:1.5px solid var(--ink) }
+  th:first-child{ text-align:left }
+  td{ padding:8px 0; border-bottom:1px solid var(--rule); text-align:right;
+    font-family:var(--mono); font-variant-numeric:tabular-nums }
+  td:first-child{ text-align:left; font-family:var(--serif); font-weight:600 }
+  tr:last-child td{ border-bottom:0 }
+
+  /* ── 图表槽位：diagram skill 出的 SVG 内联到这里 ── */
+  .chart-slot{ margin-top:var(--s3); background:var(--surface);
+    border:1px solid var(--rule); border-radius:2px; height:104px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--sans); font-size:var(--fs-small); color:var(--ink-soft) }
+
+  /* ── 页脚 ── */
+  .foot{ margin-top:var(--s3); padding-top:var(--s2);
+    border-top:1px solid var(--rule); display:flex;
+    justify-content:space-between; font-family:var(--sans);
+    font-size:var(--fs-micro); color:var(--ink-soft) }
+  @page{ size:A4; margin:0 }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 报头 -->
+  <header class="masthead">
+    <div class="brand">EDON RESEARCH</div>
+    <div class="meta">
+      投资备忘 · 标的 688256<br>
+      2026年7月25日 · 全文阅读约 4 分钟
+    </div>
+  </header>
+
+  <!-- 标题区 -->
+  <div class="head">
+    <div class="eyebrow kicker">板块深度 · 国产AI芯片</div>
+    <h1>寒武纪的客户集中度：谁在买单，买单还能撑多久</h1>
+    <p class="lead">2024 年以来营收与股价同步跳升，但增长的确定性系于极少数大客户的持续下单——这是这轮"国产算力叙事"里最容易被忽略的变量。</p>
+  </div>
+
+  <!-- 主栅格 -->
+  <div class="grid">
+    <!-- 左：正文 -->
+    <div class="body">
+      <h2>一、从常年亏损到一战翻身</h2>
+      <p>寒武纪 2020 年在科创板上市，主营训练/推理用 AI 芯片（思元系列），上市后连续多年亏损。2024 年起，受美国对华芯片出口管制收紧、国产算力自主可控需求集中释放的双重推动，公司营收与股价同步大幅跳升，2024 年首次实现全年盈利，2025 年一季度营收同比出现数量级增长（具体倍数未逐一核实），资本市场一度将其称为"寒王"。</p>
+      <p>这段叙事在公开报道里已经很完整：出口管制收紧、国产替代加速、订单从无到有。但订单从哪几个客户来、能不能持续下单，是叙事里被讲得最少的一段。</p>
+
+      <h2>二、增长的另一面：客户高度集中</h2>
+      <p>公开报道与投资者交流普遍指向一个结构性特征：寒武纪的营收增长高度依赖极少数大客户的集中采购，前五大客户占比长期处于高位（公开测算多在五成以上量级，未经公司逐一核实），部分年份甚至呈现单一客户贡献大部分收入的格局。这种结构在需求爆发期是加速器——大客户集中下单能迅速把产能利用率和营收拉满；但一旦该客户自身资本开支节奏放缓、或转向自研芯片/其他供应商，收入的脆弱性会同等剧烈地反向体现。</p>
+
+      <div class="pull">客户名单的宽度，比营收增速的斜率更值得盯住。</div>
+
+      <h2>三、Chiplet 与代工绑定：产能自主的 B 面</h2>
+      <p>受限于先进制程获取渠道，寒武纪与国内晶圆代工厂（以中芯国际为主）深度绑定，并采用 Chiplet（芯粒）等封装路线部分对冲单芯片算力密度不足的问题。这条路线短期内换来了"能持续生产"的确定性，代价是产能爬坡速度、良率提升进度都系于国内代工体系的成熟节奏——这是一条与海外同类公司完全不同的供给曲线，估值逻辑不宜直接套用英伟达等海外可比公司。</p>
+
+      <!-- 图表槽位：用 diagram skill 生成走势图 SVG 替换本块 -->
+      <div class="chart-slot">[ 图表槽位 · 寒武纪营收增速与客户集中度示意 → 走 diagram skill 出 SVG 内联 ]</div>
+    </div>
+
+    <!-- 右：侧栏指标 -->
+    <aside class="rail">
+      <span class="label">关键指标（估算，未核实）</span>
+
+      <div class="kpi">
+        <div class="k">前五大客户营收占比</div>
+        <div class="v">高集中度</div>
+        <div class="d">公开报道多指五成以上，未经公司逐一核实</div>
+      </div>
+      <div class="kpi">
+        <div class="k">2025年Q1营收同比</div>
+        <div class="v">数量级增长</div>
+        <div class="d up">▲ 具体倍数未核实</div>
+      </div>
+      <div class="kpi">
+        <div class="k">上市以来首个盈利年</div>
+        <div class="v">2024年</div>
+        <div class="d">此前连续多年亏损</div>
+      </div>
+      <div class="kpi">
+        <div class="k">研发费用率</div>
+        <div class="v">长期高位</div>
+        <div class="d">历史上多年估计 &gt;30% 营收</div>
+      </div>
+
+      <!-- 产业链关联方 -->
+      <div class="data">
+        <span class="label">产业链关联方</span>
+        <table>
+          <thead><tr><th>环节</th><th>角色</th></tr></thead>
+          <tbody>
+            <tr><td>688256 寒武纪</td><td>AI芯片设计商</td></tr>
+            <tr><td>中芯国际</td><td>主要代工方</td></tr>
+            <tr><td>头部云/算力自建方</td><td>主要买方（未披露）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="foot">
+    <span>数据来源：公开财报摘要、媒体报道整理；标"估/未核实"为基于公开认知的估算，非公司正式披露数值 · 仅供研究，非投资建议</span>
+    <span>EDON RESEARCH · 688256 · 1/1</span>
+  </footer>
+
+</div>
+</body>
+</html>

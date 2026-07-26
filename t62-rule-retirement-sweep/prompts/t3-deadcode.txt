@@ -1,0 +1,1 @@
+我在重构一个 TypeScript 项目。utils/date.ts 里有个 formatLegacyDate 函数，我在 VSCode 里搜了一下 formatLegacyDate，除了定义那行没看到别的地方用它。这个应该是老代码没人用了吧，我直接删掉可以吗？

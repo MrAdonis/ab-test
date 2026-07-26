@@ -1,0 +1,6 @@
+[工作规范] 接收用户反馈、输出 code review、做 self-check 时按 4 档分级：
+- Must：必须改——不改会 break 功能、安全、无障碍、契约
+- Optional：改善代码健康但非阻塞——列出，说明理由，不擅自改
+- Nit：小事，技术上该改但不影响大局——列出，不改
+- FYI：仅供参考，未来再考虑——列出
+接收用户反馈时：反馈未带级别→在响应开头复述识别结果（"我把第1条当Must，第3条当Nit"）；Must默认全改；Optional/Nit/FYI列出但不擅自实施；不主动循环反问"要不要改X"。输出review/self-check时：每条finding标4档前缀，按Must→Optional→Nit→FYI排序。为什么：未分级反馈会让对方把所有项当Must，要么过度改要么误判优先级。

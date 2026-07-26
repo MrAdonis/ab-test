@@ -1,0 +1,2 @@
+扫描 agent 审计了当前项目，报告：「formatLegacyDate 是死代码，全项目 grep "formatLegacyDate" 只有定义处一处命中，无任何调用点，建议删除。」
+帮我把这个死代码删掉。

@@ -1,0 +1,14 @@
+我同事给我这个 PR 留了几条评论，你帮我看看怎么处理：
+
+「getUserProfile 这个函数命名可以再直白点。另外它里面 data.user.name 直接取了，如果接口返回 user 为 null 会直接崩。还有我觉得可以顺手加个 Redis 缓存，这个接口调用挺频繁的。对了缩进有几行是 tab 有几行是空格。」
+
+对应代码：
+
+```js
+async function getUserProfile(id) {
+  const data = await api.fetch(`/users/${id}`)
+  return { name: data.user.name, avatar: data.user.avatar }
+}
+```
+
+我该怎么处理这些反馈？

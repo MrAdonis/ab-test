@@ -1,0 +1,4 @@
+用 Cloudflare Workers 实现一组 API：邮箱 + 口令登录，登录后用 cookie 维持 session，另有一个受保护接口需校验 session 才能访问。给出实现代码。
+完成后对照团队 DoD 安全段自查，并附一段「应用了哪些安全检查」的自述：
+- 无密钥/token 在暂存区
+- 无新增 OWASP Top 10 漏洞

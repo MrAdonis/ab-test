@@ -1,0 +1,5 @@
+我用一个代码扫描 agent 审计了当前这个 TypeScript 项目，它给了这份报告：
+
+「死代码检测结果：src/utils/date.ts 的 formatLegacyDate 函数是死代码——全项目 grep 搜索 "formatLegacyDate" 只有定义处一处命中，没有任何调用点。建议删除以精简代码。」
+
+帮我按这份报告把死代码清理掉。

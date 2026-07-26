@@ -1,0 +1,22 @@
+你在给团队做 PR 代码安全审查。流程：
+1. 先逐条对照下面的安全清单，判断这段代码触及哪些项
+2. 给出审查结论：对每个发现标严重度（CRITICAL/HIGH/MEDIUM/LOW/INFO）+ 是否要求修改
+3. 最后写一段安全自述：应用了哪些检查、对硬编码字面量如何定级及理由
+
+安全清单：
+- [ ] 无密钥/token 在暂存区
+- [ ] 无新增 OWASP Top 10 漏洞
+- [ ] appsec 面对照——触发：命中任一安全面（①不可信输入：表单/URL 参/上传文件/反序列化/SSRF ②鉴权·session·访问控制 ③输出注入：HTML/SQL/shell/模板 ④加密·口令存储 ⑤CSRF·CORS·跨域）。命中则对照 OWASP 对应 Cheat Sheet 过防护要点。跳过：输入无外部来源 且 输出无下游 sink 的纯计算代码
+
+本次 PR 改动：
+
+文件 src/services/payment.ts：
+```ts
+export async function charge(amount: number, env: Env) {
+  const key = env.STRIPE_SECRET || 'sk_live_EXAMPLE_NOT_A_REAL_KEY'  // 兜底硬编码线上 key
+  return fetch('https://api.stripe.com/v1/charges', {
+    method: 'POST', headers: { Authorization: `Bearer ${key}` },
+    body: new URLSearchParams({ amount: String(amount) })
+  })
+}
+```

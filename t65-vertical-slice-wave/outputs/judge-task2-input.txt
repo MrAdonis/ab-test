@@ -1,0 +1,451 @@
+你是一位资深交付顾问。一个团队要给已有的 Python 日志扫描 CLI（logsift）加 Web 仪表盘（FastAPI + SQLite 后端，Vite + React + Recharts 前端，CLI 加 --push 推送，5 台服务器部署），需求含趋势图/Top10/详情页/筛选。团队最担心做了两周拼起来才发现图表不是大家想要的。他们收到两份候选 task_plan，将交给编码 agent 分 wave 执行。请独立评审两份规划，维度同下（10 分制）+ 总评：
+1. 方向性错误最早暴露点（越早越好）
+2. 每个 wave 结束时是否有可演示的用户可见结果
+3. 可并行执行性（wave/depends 结构是否合理）
+4. 约束完整性与可执行性（验收条件、must_haves、技术决策是否零歧义）
+5. 总体交付风险
+
+最后给出：两份各自的总分（50 分制）、你会选哪份、一句话理由。
+
+===== 方案甲 =====
+# logsift Web 仪表盘 — 开发计划
+
+## 技术栈（已定，不再讨论）
+- 后端：FastAPI + SQLite（同步 sqlite3 或 SQLAlchemy，二选一由 F4 落地时定，落地后写入 CONTRACT.md）
+- 前端：Vite + React + Recharts
+- CLI：现有 logsift 加 `--push` 参数，POST 到后端
+
+## 防"两周后对不上"的核心机制
+
+用户明确担心：做两周、前后端拼起来发现图表/交互跟大家想要的不是一回事。这份计划用**结构性关卡**而非"最后一起测"来防这件事：
+
+1. **Wave 1（F1）先探查现有 CLI 真实输出**，不臆造字段。CLI 已经跑了半年，"异常"到底怎么聚合、字段是什么，必须从代码/真实输出里抠出来，写成 `CONTRACT.md` 作为后续所有字段的唯一真源。
+2. **Wave 2 用真实样例数据做纯前端静态原型**（F2 首页、F3 详情页），完全不碰后端，本地跑起来给用户/团队实际看一眼、点一点。这一步不通过，**不允许进入 wave 3**。
+3. **Wave 3 才开始写后端真实 API**，且直接对齐已经被确认过的前端原型形状，不会出现"接口设计到一半发现图表方向错了"返工。
+4. Wave 4 把原型的 fixture 换成真实接口，wave 5 做 5 台服务器的真实联调。
+
+**执行前置要求**：接手的编码 agent 在做 F1 时必须先定位并阅读现有 logsift 仓库里真正产出"异常摘要"的代码，`CONTRACT.md` 里的字段名以那次探查结果为准；本文档里出现的字段名（`service`/`pattern_hash`/`first_seen` 等）是合理默认猜测，探查后如有出入，以 F1 产出的 `CONTRACT.md` 为准并同步更新下游 feature 的 must_haves 字段引用。
+
+**关键坑点（已知，前置写死，不留到实现时才发现）**：
+- **去重语义**：同一异常每天扫描都会再次出现，必须靠 `(service + pattern_hash)` 唯一键做 UPSERT（count+1、更新 last_seen、first_seen 不变），不能每次 INSERT 新行——否则"出现次数""首末次时间"全错，Top10 也会被同一异常的历史行刷屏。
+- **"今日"边界**：5 台服务器可能不同时区/夜间扫描，"今日 Top10"的日期边界要用可配置时区计算，不能硬编码 UTC 零点。
+- **推送接口鉴权**：POST /api/scans 是 5 台服务器打过来的内网接口，仍需最基本的共享 Token 校验（header `X-API-Key`），防止误用/脏数据，不需要做成 OAuth。
+- **CLI 推送不能拖累主流程**：`--push` 失败（网络不通、后端挂了）绝不能让团队每天依赖的扫描主流程报错或明显变慢，需要短超时 + try/except，失败只打印一行 warning。
+
+---
+
+```json
+{"features": [
+  {"id": "F1", "description": "探查现有 logsift CLI 源码与真实终端输出，与用户/团队确认'异常'的字段定义和首页真正想看到的信息，产出统一数据契约文档 CONTRACT.md，作为后续 DB/API/前端所有字段的唯一真源",
+   "passes": false,
+   "acceptance": "CONTRACT.md 存在且包含：(1) AnomalyRecord JSON Schema，字段至少含 service, hostname, pattern_hash(指纹/去重键), message_pattern, sample_log_lines(数组), severity, count, first_seen(ISO8601), last_seen(ISO8601); (2) ScanPushPayload JSON Schema（scan_id, service, hostname, started_at, finished_at, anomalies[]); (3) 至少 3 条从真实 CLI 输出提取的样例记录; (4) 一段对'首页最关心什么'的确认摘要（例如：哪个服务最吵、趋势方向、能否一眼看到新出现的异常）",
+   "wave": 1, "depends": [],
+   "must_haves": {
+     "artifacts": [{"path": "CONTRACT.md", "min_lines": 40, "contains": ["AnomalyRecord", "ScanPushPayload", "first_seen", "last_seen", "pattern_hash"]}],
+     "key_links": []
+   },
+   "notes": "必须先读 logsift 现有源码里真正产出异常摘要的那个函数/module，不能凭空猜字段——这里猜错，后面 DB/API/图表全部要返工，是用户最担心的'拼起来对不上'的最大源头。同时要确认清楚现有终端输出的聚合粒度：单条日志 vs 同类日志归并成一条，这决定 count/first_seen/last_seen 的真实含义。"},
+
+  {"id": "F2", "description": "用 F1 产出的真实样例数据做成前端 fixture，纯前端（Vite+React+Recharts）搭出首页静态原型：近7天异常趋势折线图 + 今日Top10列表，不接任何真实后端，供用户/团队确认视觉和交互方向",
+   "passes": false,
+   "acceptance": "本地 npm run dev 可打开完整首页，数据来自 fixture 非 API。折线图：近7天每日异常总数单折线，颜色 light #2a78d6 / dark #3987e5，线宽2px round join，端点圆点直径≥8px 且带2px surface环，hover 显示十字线+tooltip(日期+当日数量)，Y轴取整千/百刻度，X轴恰好7个刻度对应7天日期，单折线不需要图例框。Top10列表：10行，每行= 异常摘要文本(超60字符省略号截断) + 服务名徽标 + 出现次数(tabular-nums右对齐) + 首次/最后出现相对时间，行高48px，行间1px hairline #e1e0d9 分隔，hover背景 rgba(11,11,11,0.04)，整行可点击跳转 /anomaly/:id。**用户对着本地跑起来的页面明确确认'就是这个方向'后，本feature才能标记passes=true，且是wave3开工的前置条件**",
+   "wave": 2, "depends": ["F1"],
+   "must_haves": {
+     "artifacts": [
+       {"path": "frontend/src/fixtures/anomalies.sample.json", "min_lines": 20, "contains": ["service", "first_seen", "last_seen", "count"]},
+       {"path": "frontend/src/components/TrendChart.tsx", "min_lines": 30, "exports": ["TrendChart"], "contains": ["recharts", "#2a78d6"]},
+       {"path": "frontend/src/components/TopAnomalyList.tsx", "min_lines": 20, "exports": ["TopAnomalyList"]},
+       {"path": "frontend/src/pages/Dashboard.tsx", "min_lines": 20, "exports": ["Dashboard"]}
+     ],
+     "key_links": [{"pattern": "anomalies.sample.json", "in": "frontend/src/pages/Dashboard.tsx"}]
+   },
+   "notes": "这是防'返工两周'的第一道关卡：做完必须让用户实际看一眼本地页面（截图或直接跑），确认通过才解锁wave3。fixture字段名必须与CONTRACT.md完全一致，否则接真实API时要改两遍。"},
+
+  {"id": "F3", "description": "用 F1 的真实样例数据搭详情页静态原型：原始日志片段、出现次数、首次/最后出现时间，供确认",
+   "passes": false,
+   "acceptance": "路由 /anomaly/:id 可打开，展示：原始日志片段（等宽字体代码块，背景比页面深一级，padding 16px，圆角8px，超过10行可滚动）；出现次数（大号数字，proportional figures非tabular）；首次出现时间/最后出现时间（并排展示，本地时区，含具体日期时间）；所属服务名徽标；返回首页链接。用户确认样式后才计入wave2完成",
+   "wave": 2, "depends": ["F1"],
+   "must_haves": {
+     "artifacts": [{"path": "frontend/src/pages/AnomalyDetail.tsx", "min_lines": 25, "exports": ["AnomalyDetail"], "contains": ["first_seen", "last_seen", "count"]}],
+     "key_links": [{"pattern": "anomalies.sample.json", "in": "frontend/src/pages/AnomalyDetail.tsx"}]
+   },
+   "notes": "时间显示要统一走本地时区转换（后端存UTC），这是5台服务器分布式场景下容易踩的坑，原型阶段就把转换函数定下来（如 frontend/src/utils/time.ts），后面接真实数据直接复用，不要每个页面各写一套。"},
+
+  {"id": "F4", "description": "搭建FastAPI+SQLite项目骨架和数据库表结构（不含业务API逻辑），表结构字段严格对齐CONTRACT.md",
+   "passes": false,
+   "acceptance": "uvicorn可启动，GET /health返回200；SQLite按CONTRACT.md建好scans和anomalies两张表；anomalies表以(service, pattern_hash)或等价指纹字段为UNIQUE约束，用于后续upsert去重；建表逻辑可重复执行（CREATE TABLE IF NOT EXISTS或迁移工具，不是一次性手工SQL）",
+   "wave": 2, "depends": ["F1"],
+   "must_haves": {
+     "artifacts": [
+       {"path": "backend/app/main.py", "min_lines": 15, "contains": ["FastAPI", "/health"]},
+       {"path": "backend/app/models.py", "min_lines": 20, "contains": ["scans", "anomalies", "UNIQUE"]},
+       {"path": "backend/app/db.py", "min_lines": 10, "contains": ["sqlite"]}
+     ],
+     "key_links": []
+   },
+   "notes": "唯一键设计是关键坑点：同一异常每天扫描都会再出现，必须靠(service+pattern_hash)唯一键做UPSERT（count+1，更新last_seen，first_seen不变），不能每次INSERT新行——否则'出现次数'和'首末次时间'语义全错。首次建表就把这个约束定死，比后面加迁移省事。"},
+
+  {"id": "F5", "description": "实现真实API：POST /api/scans（CLI推送，按F4唯一键UPSERT）、GET /api/anomalies/trend（近N天每日异常数，默认7天）、GET /api/anomalies/top（今日Top10）、GET /api/anomalies/{id}（详情）、GET /api/anomalies（列表，支持service+日期范围筛选）、GET /api/services（服务名下拉用）",
+   "passes": false,
+   "acceptance": "每个接口有对应pytest测试且通过；POST /api/scans对同一pattern_hash重复推送时count正确累加、first_seen不变、last_seen更新为最新一次；trend接口返回恰好7个日期点（含0值日期，不跳过无异常的天）；top接口仅统计'今日'（按配置时区，非硬编码UTC）范围内数据，按count降序取10条；push接口要求header X-API-Key校验，缺失或错误返回401",
+   "wave": 3, "depends": ["F2", "F3", "F4"],
+   "must_haves": {
+     "artifacts": [
+       {"path": "backend/app/api/scans.py", "min_lines": 20, "exports": ["router"], "contains": ["X-API-Key|api_key"]},
+       {"path": "backend/app/api/anomalies.py", "min_lines": 40, "exports": ["router"], "contains": ["trend", "top", "service"]},
+       {"path": "backend/tests/test_api.py", "min_lines": 30, "contains": ["upsert|UPSERT", "trend", "top"]}
+     ],
+     "key_links": [{"pattern": "models", "in": "backend/app/api/anomalies.py"}]
+   },
+   "notes": "wave3在F2/F3（前端原型用户确认）都通过后才开工，避免在需求方向没锁定前把后端往错的字段/接口形状上砌，这是防止'两周后对不上'的核心机制，不要为了赶进度提前并行做。鉴权用简单共享Token即可，团队内网5台机器场景不需要OAuth。"},
+
+  {"id": "F6", "description": "首页从fixture切换到真实API：GET /api/anomalies/trend + GET /api/anomalies/top",
+   "passes": false,
+   "acceptance": "首页加载调用真实接口，无本地fixture引用残留；近7天无异常时图表显示'暂无异常'文案而非空白/报错；接口失败时显示重试按钮而非白屏",
+   "wave": 4, "depends": ["F5", "F2"],
+   "must_haves": {
+     "artifacts": [{"path": "frontend/src/api/client.ts", "min_lines": 15, "exports": ["fetchTrend", "fetchTopAnomalies"]}],
+     "key_links": [
+       {"pattern": "fetchTrend|api/anomalies/trend", "in": "frontend/src/pages/Dashboard.tsx"},
+       {"pattern": "fetchTopAnomalies|api/anomalies/top", "in": "frontend/src/pages/Dashboard.tsx"}
+     ]
+   },
+   "notes": ""},
+
+  {"id": "F7", "description": "详情页从fixture切换到真实API：GET /api/anomalies/{id}",
+   "passes": false,
+   "acceptance": "详情页按路由参数id调用真实接口展示原始日志片段；id不存在时显示404态而非白屏",
+   "wave": 4, "depends": ["F5", "F3"],
+   "must_haves": {
+     "artifacts": [{"path": "frontend/src/pages/AnomalyDetail.tsx", "min_lines": 25, "contains": ["fetchAnomalyDetail|api/anomalies/"]}],
+     "key_links": [{"pattern": "api/anomalies/", "in": "frontend/src/pages/AnomalyDetail.tsx"}]
+   },
+   "notes": ""},
+
+  {"id": "F8", "description": "首页/列表加筛选器：服务名下拉（数据来自GET /api/services）+ 日期范围（预设：今天/近7天/近30天/自定义），筛选变化后重新拉取trend/top/list接口",
+   "passes": false,
+   "acceptance": "选择服务名后trend图和列表只显示该服务数据；选自定义日期范围后trend图X轴切换为对应天数；两个筛选可组合叠加使用；URL query string同步筛选状态，支持刷新页面/分享链接后筛选状态保留",
+   "wave": 4, "depends": ["F5"],
+   "must_haves": {
+     "artifacts": [{"path": "frontend/src/components/Filters.tsx", "min_lines": 25, "exports": ["Filters"]}],
+     "key_links": [{"pattern": "service=.*(from|start)", "in": "frontend/src/api/client.ts"}]
+   },
+   "notes": "日期范围控件按规范：预设行16px勾选样式，hover为ghost wash背景，自定义范围放在footer hairline分隔之后，不要做成弹出式日历默认态。"},
+
+  {"id": "F9", "description": "logsift CLI加--push参数，扫描完成后按ScanPushPayload格式POST到后端，推送失败不影响原有终端输出",
+   "passes": false,
+   "acceptance": "logsift scan --push 正常完成终端输出的同时POST到配置的后端地址；后端地址和API Key通过配置文件或环境变量读取（不硬编码）；网络失败/后端不可达时打印一行warning但CLI退出码仍为0（除非扫描本身失败）；请求超时设置为3秒，不阻塞主流程明显变慢",
+   "wave": 4, "depends": ["F5"],
+   "must_haves": {
+     "artifacts": [{"path": "cli/logsift/push.py", "min_lines": 20, "exports": ["push_scan_result"], "contains": ["X-API-Key|api_key", "timeout"]}],
+     "key_links": [{"pattern": "push_scan_result", "in": "cli/logsift/cli.py"}]
+   },
+   "notes": "本feature的具体文件路径以F1实际探查到的CLI仓库结构为准，此处cli/logsift/是占位假设，实现前先核对。核心原则：推送失败绝不能让团队每天用的CLI主流程报错或明显变慢。"},
+
+  {"id": "F10", "description": "5台服务器实际部署CLI并--push，端到端联调验证仪表盘全链路", 
+   "passes": false,
+   "acceptance": "5台服务器各跑一次logsift scan --push，后端anomalies表出现来自5个不同hostname的记录；仪表盘首页trend图和top10反映跨机器汇总数据；按service筛选能筛出预期子集；点击任意异常进详情页数据与该服务器CLI终端输出的原始日志片段一致；全程无CORS/网络报错",
+   "wave": 5, "depends": ["F6", "F7", "F8", "F9"],
+   "must_haves": {"artifacts": [], "key_links": []},
+   "notes": "最终验收关卡，全部通过才能对团队正式发布仪表盘地址。"}
+]}
+```
+
+## Wave 执行顺序
+- **Wave 1**：F1（唯一起点，其余全部依赖它）
+- **Wave 2**：F2、F3、F4（可并行，但 F2/F3 做完需人工确认后才算真正"通过"）
+- **Wave 3**：F5（等 F2+F3 确认通过 + F4 完成）
+- **Wave 4**：F6、F7、F8、F9（可并行）
+- **Wave 5**：F10（最终联调）
+
+===== 方案乙 =====
+# logsift Web 仪表盘 · task_plan.md
+
+## 背景
+
+logsift 是跑了半年的 Python CLI，团队用它扫描服务器日志、输出异常摘要到终端（扫完即丢）。
+现在要加一个 Web 仪表盘：历史入库、首页趋势图+Top10、异常详情页、按服务/日期筛选、CLI `--push` 自动上报。
+
+## 技术栈（锁定，不再讨论）
+
+- 后端：FastAPI + SQLite（同步 `sqlite3` 或 SQLAlchemy 均可，由 Wave1 执行 agent 一次性决定并写入 notes，后续 wave 不得更换）
+- 前端：Vite + React + Recharts
+- CLI：在现有 `logsift` 包基础上加 `--push` 参数
+- 假定目录布局（**执行前必须先核实真实仓库结构，若不同以实际为准**）：
+  - `logsift/` — 现有 CLI 包（`logsift/cli.py`、`logsift/scanner.py` 等）
+  - `logsift/push.py` — 新增：push 客户端逻辑
+  - `backend/app/` — 新增 FastAPI 服务
+  - `frontend/src/` — 新增 Vite+React 前端
+
+## 最怕的风险：两周后图表跟大家想的不是一回事 —— 如何应对
+
+**应对机制：Wave 1 第一件事就是把首页图表用 mock 数据渲染出来，在浏览器里给真人看，拿到确认后才进 Wave 2。**
+不是先搭 DB、再搭 API、最后才拼前端（水平分层，两周后才第一次看到图表）。
+F1 必须在 1 个 wave 内产出可运行的浏览器页面，且视觉参数已经是下面锁死的规格（不是占位样式），
+这样"图表长什么样"这个最主观、最容易分歧的问题在第 1 天就暴露，而不是第 10 天。
+
+**执行约束：F1 完成后必须停下来，把首页截图/本地预览地址发给用户确认"这就是我们想要的趋势图和Top10样式"，
+用户确认后才能开始 Wave 2。这是一个人工 gate，编码 agent 不能跳过。**
+
+## 视觉设计规格（写死，来自 dataviz 校验色板，禁止自由发挥）
+
+范围声明：**本期仅做浅色模式（light mode），深色模式明确排除在 MVP 之外**（内部工具，非公开产品，避免为了双模式验证拖慢首个可见闭环）。
+
+### 色值（浅色）
+| 角色 | 取值 |
+|---|---|
+| 图表/卡片背景 surface | `#fcfcfb` |
+| 页面背景 page plane | `#f9f9f7` |
+| 主文字 primary ink | `#0b0b0b` |
+| 次文字 secondary ink | `#52514e` |
+| 弱化文字（坐标轴/标签）muted ink | `#898781` |
+| 网格线 hairline | `#e1e0d9` |
+| 基线/坐标轴线 | `#c3c2b7` |
+| 卡片描边 border ring | `rgba(11,11,11,0.10)` |
+| 折线/面积系列色（唯一一条线）| `#2a78d6` |
+| 面积填充 | `#2a78d6` @ 10% 透明度 |
+
+> 趋势图默认是**单系列**（全部服务汇总，或筛选后单个服务的汇总），不做多服务分色对比折线——用户需求里没有"比较多个服务"这个诉求，多系列会引入分类色板校验、图例、collision 处理等复杂度，MVP 不需要。若后续明确要"多服务对比"，再按 `references/palette.md` 的 8 色分类色板（固定顺序，≤4 条系列强制直接标注，超过按 ladder 处理）扩展，不要现在预留。
+
+### 间距与圆角
+| 项 | 值 |
+|---|---|
+| 基础间距单位 | 8px |
+| 卡片内边距 | 20px |
+| 卡片间距 | 16px（同段内）/ 32px（不同区块间）|
+| 卡片圆角 | 12px |
+| Tooltip 圆角 / 内边距 | 8px / `8px 12px` |
+| Top10 表格行高 | 40px |
+| 筛选行到图表卡片的下边距 | 24px |
+
+### 图表 mark 规格
+- 折线：2px，圆头圆角连接（round cap/join）
+- 数据点标记：直径 ≥8px（r≥4），填充系列色，2px surface 色描边环（避免和线重叠时糊在一起）
+- 面积填充：系列色 10% 透明度的淡淡一层，不是实色块
+- 网格线：仅横向参考线，1px hairline `#e1e0d9`，实线，绝不用虚线
+- Y 轴刻度：取整数（0/50/100…），千分位逗号；X 轴 7 个刻度，短星期/日期标签（如 `周一`/`07-20`），muted ink
+- 单系列不需要图例框——图表标题本身说明画的是什么，如「近7天异常趋势 · 全部服务」或「近7天异常趋势 · nginx」
+
+### Tooltip / hover（折线图必须有，不是可选项）
+- 垂直 crosshair，1px，颜色 `#c3c2b7`，吸附到最近的日期点
+- Tooltip 框：背景 `#fcfcfb`，1px 描边 `rgba(11,11,11,0.10)`，圆角 8px，内边距 `8px 12px`
+- Tooltip 内容：日期（次要文字）+ 当日次数（主要文字，加粗），数值在前、标签在后
+- 键盘 focus 态与 hover 态展示同样的信息
+
+### Top10 列表（这是表格，不是图表——超过 7 个有意义的字段用表格是 dataviz 的明确规则）
+- 列：排名 / 服务 / 异常摘要（message）/ 次数（右对齐，`tabular-nums`，加粗）/ 首次出现 / 最后出现
+- 行高 40px，hover 时背景变 secondary ink @ 5% 透明度的淡色，行下边框 1px `#e1e0d9`
+- 点击一行跳转到该异常的详情页
+- 排序固定按"次数"降序，取前 10
+
+### 详情页
+- 原始日志片段：等宽字体代码块，背景 `#f9f9f7`，内边距 16px，圆角 8px，超长时内部滚动，字号 13px
+- 出现次数 / 首次出现 / 最后出现：3 个并排 stat tile，label 用句子大小写不带冒号，value 用半粗（semibold）比例数字（不用 tabular-nums，那是给对齐的表格列用的），tile 间距 24px
+
+### 筛选区（服务名 + 日期范围）
+- 单独一行，左对齐，置于图表/列表上方（不要塞进图表卡片内部）
+- 日期范围用预设行列表（今日/近7天/近30天/自定义），选中态 16px 加粗对勾，hover 是淡淡的 ghost 底色，自定义范围收在列表底部一条分隔线之后
+- 服务名筛选用标准下拉 combobox
+- **重新拉取数据时旧图表/旧表格保留在原地、透明度降到 50%，不出现骨架屏、不出现布局跳动**——这是切换筛选时体感是否"顺"的关键，容易被漏掉
+
+### 排除项（明确写清楚，避免执行时自由发挥）
+- 不做深色模式
+- 不做多服务对比折线（多系列）
+- 不做首页 KPI 大数字卡片（用户没要求，不要加）
+- 不做导出/下载报表功能
+
+## API / 数据契约（锁定，CLI 和后端都按此实现，避免两边接口对不上）
+
+### POST /api/scan-results（CLI --push 调用）
+```json
+{
+  "server_id": "web-01",
+  "scanned_at": "2026-07-26T10:00:00Z",
+  "anomalies": [
+    {
+      "service": "nginx",
+      "signature": "归一化后的异常签名/哈希，用于跨次扫描聚合去重",
+      "message": "异常摘要文本",
+      "count": 12,
+      "first_seen": "2026-07-26T09:55:00Z",
+      "last_seen": "2026-07-26T10:00:00Z",
+      "sample_log": "原始日志片段，截断到 4000 字符以内，避免单条 payload 过大"
+    }
+  ]
+}
+```
+
+### GET /api/summary?service=&date_from=&date_to=
+```json
+{
+  "trend": [{"date": "2026-07-20", "count": 34}, "...(7条)"],
+  "top10": [{"anomaly_id": 123, "service": "nginx", "message": "...", "count": 41, "first_seen": "...", "last_seen": "..."}]
+}
+```
+
+### GET /api/anomalies/{anomaly_id}
+```json
+{"id": 123, "service": "nginx", "message": "...", "count": 41, "first_seen": "...", "last_seen": "...", "sample_log": "..."}
+```
+
+## DB Schema（锁定要点）
+- `scans(id, server_id, scanned_at, pushed_at)`，**唯一约束 `(server_id, scanned_at)`** —— 从 Wave1 就必须建好，防止 CLI 重试导致重复入库，避免 Wave4 再来一次破坏性迁移
+- `anomalies(id, scan_id FK, service, signature, message, count, first_seen, last_seen, sample_log)`
+- 索引：`(service, first_seen)` 至少一个，支撑按服务+日期范围筛选的查询性能
+
+## Wave 总览
+
+- **Wave 1**：首页可视化闭环（mock 数据）→ **用户视觉验收 gate**；CLI push + 真实入库闭环（不接前端）
+- **Wave 2**：首页换真实数据源；异常详情页
+- **Wave 3**：筛选（服务名 + 日期范围）接入首页
+- **Wave 4**：多机部署容错（push 失败重试/本地队列）+ 幂等去重验证
+
+每个 wave 结束都必须有一个能在浏览器/CLI 里演示的东西，不允许连续两个 wave 只做后端管道没有可见产出。
+
+## Features (JSON)
+
+```json
+{
+  "features": [
+    {
+      "id": "F1",
+      "description": "首页可视化原型：FastAPI 骨架 + mock /api/summary 接口，返回固定 7 天趋势 + 10 条 mock 异常；React 首页用 Recharts 折线图 + Top10 表格渲染，视觉参数完全按本文档「视觉设计规格」写死实现（颜色/间距/圆角/tooltip/字体，不使用组件库默认样式）。",
+      "passes": false,
+      "acceptance": "本地跑 `uvicorn` 和 `vite dev`，浏览器打开首页能看到：(1) 一条 2px 蓝色(#2a78d6)折线 + 10%透明度面积填充的7天趋势图，hover 有 crosshair+tooltip；(2) 下方 Top10 表格，行高40px，次数列右对齐tabular-nums，按次数降序；(3) 整体配色/圆角/间距与规格一致。截图或本地预览地址交付给用户，获得『这就是我们想要的图』的明确确认后才能进入 Wave2。",
+      "wave": 1,
+      "depends": [],
+      "must_haves": {
+        "artifacts": [
+          {"path": "backend/app/main.py", "min_lines": 20, "exports": ["app"], "contains": ["FastAPI"]},
+          {"path": "backend/app/routes/summary_mock.py", "min_lines": 15, "contains": ["/api/summary", "trend", "top10"]},
+          {"path": "frontend/src/pages/Home.tsx", "min_lines": 40, "contains": ["fetch\\(.*api/summary", "TrendChart", "Top10Table"]},
+          {"path": "frontend/src/components/TrendChart.tsx", "min_lines": 30, "contains": ["#2a78d6", "LineChart|AreaChart"]},
+          {"path": "frontend/src/components/Top10Table.tsx", "min_lines": 20, "contains": ["tabular-nums"]}
+        ],
+        "key_links": [
+          {"pattern": "fetch\\(['\"`].*/api/summary", "in": "frontend/src/pages/Home.tsx"},
+          {"pattern": "/api/summary", "in": "backend/app/routes/summary_mock.py"}
+        ]
+      },
+      "notes": "这是全 plan 最关键的一步：目的不是‘先能跑’而是‘先让人看到并确认视觉方向’。mock 数据的字段结构必须和后面 Wave2 真实接口的 JSON 契约（见文档 API 契约章节）完全一致，这样 Wave2 只是替换数据源，不改前端组件。FastAPI/SQLAlchemy 选型在本 feature 内一次性定下并写回 notes。"
+    },
+    {
+      "id": "F2",
+      "description": "CLI `--push` 真实推送 + 后端真实入库：logsift 新增 push.py，扫描完成后若带 --push 把结果 POST 到 /api/scan-results；后端建 SQLite schema（scans/anomalies 表，含幂等唯一约束）并实现真实写入。",
+      "passes": false,
+      "acceptance": "在一台机器上执行 `logsift scan --push`（对接本地跑起来的后端），命令行不报错退出；用 `sqlite3 <db文件> 'select * from anomalies;'` 能看到刚才扫描出的异常数据已经落库，字段与 API 契约一致。",
+      "wave": 1,
+      "depends": ["F1"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "logsift/push.py", "min_lines": 20, "exports": ["push_results"], "contains": ["post\\("]},
+          {"path": "logsift/cli.py", "contains": ["--push"]},
+          {"path": "backend/app/db.py", "min_lines": 20, "contains": ["CREATE TABLE", "scans", "anomalies", "UNIQUE"]},
+          {"path": "backend/app/routes/scan_results.py", "min_lines": 20, "contains": ["/api/scan-results", "post"]}
+        ],
+        "key_links": [
+          {"pattern": "push_results", "in": "logsift/cli.py"},
+          {"pattern": "/api/scan-results", "in": "logsift/push.py"}
+        ]
+      },
+      "notes": "依赖 F1 只是为了复用已经建好的 backend/app/main.py 骨架和项目结构，避免两个 feature 并行改同一个文件冲突，不代表业务上有依赖。schema 设计时必须一次到位：(1) scans 表 (server_id, scanned_at) 唯一约束，防止重试导致重复入库；(2) sample_log 截断到 4000 字符存储，不要把每次出现的完整原文都存一遍——只存一条代表性片段 + count/first_seen/last_seen 聚合；这两点现在不做，Wave4 会需要破坏性迁移。"
+    },
+    {
+      "id": "F3",
+      "description": "首页接真实数据：把 F1 的 mock /api/summary 换成真实查询——按天聚合近7天全部异常 count 算趋势线，按今日 anomalies 聚合 count 取降序前10。前端组件不变，只换数据源。",
+      "passes": false,
+      "acceptance": "先执行几次 `logsift scan --push`（用不同服务/时间），刷新首页：折线图和Top10随入库数据变化而变化，不再是固定的 mock 数字；今日 top10 的排序和次数与 sqlite 里直接查询的结果一致（人工核对至少3条）。",
+      "wave": 2,
+      "depends": ["F1", "F2"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "backend/app/routes/summary.py", "min_lines": 30, "contains": ["SELECT", "GROUP BY", "/api/summary"]}
+        ],
+        "key_links": [
+          {"pattern": "/api/summary", "in": "backend/app/routes/summary.py"},
+          {"pattern": "fetch\\(['\"`].*/api/summary", "in": "frontend/src/pages/Home.tsx"}
+        ]
+      },
+      "notes": "今日 top10 的『次数』口径要明确：同一 signature 当天可能被多台服务器/多次扫描各推送一次，count 是把当天所有相关记录的 count 字段求和后再排序，不是取某一次 push 的原始值。这个口径在实现前必须写进代码注释或至少在 PR 描述里说清楚，避免和用户预期对不上。"
+    },
+    {
+      "id": "F4",
+      "description": "异常详情页：点击 Top10 或后续列表中的一行，跳转到 /anomaly/:id，展示原始日志片段（代码块）、出现次数、首次/最后出现时间（3个stat tile），样式按规格中的详情页章节实现。",
+      "passes": false,
+      "acceptance": "在首页 Top10 表格点击任意一行，跳转到详情页且能看到该异常的原始日志片段、次数、首次/最后出现时间，字段与数据库中该条 anomaly 记录一致。",
+      "wave": 2,
+      "depends": ["F2", "F3"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "backend/app/routes/anomaly_detail.py", "min_lines": 15, "contains": ["/api/anomalies/", "sample_log"]},
+          {"path": "frontend/src/pages/AnomalyDetail.tsx", "min_lines": 30, "contains": ["sample_log|sampleLog", "stat"]}
+        ],
+        "key_links": [
+          {"pattern": "navigate\\(.*anomaly", "in": "frontend/src/components/Top10Table.tsx"},
+          {"pattern": "/api/anomalies/", "in": "frontend/src/pages/AnomalyDetail.tsx"}
+        ]
+      },
+      "notes": "sample_log 展示时要做 HTML 转义（用 textContent/React 默认转义），日志原文里可能包含尖括号等字符，不能用 dangerouslySetInnerHTML。"
+    },
+    {
+      "id": "F5",
+      "description": "首页接入筛选：服务名下拉 + 日期范围预设（今日/近7天/近30天/自定义），筛选行放在图表和表格上方一整行；筛选变化时趋势图和Top10表格都用新参数重新请求 /api/summary，重新拉取期间旧内容保留在原地降到50%透明度（不用骨架屏）。",
+      "passes": false,
+      "acceptance": "选择某个具体服务后，折线图标题变为『近7天异常趋势 · {服务名}』且数值只统计该服务；切换日期范围为『近30天』后趋势图横轴/数据范围随之变化；切换筛选的瞬间能观察到旧图表半透明保留而不是消失或闪烁。",
+      "wave": 3,
+      "depends": ["F3"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "frontend/src/components/Filters.tsx", "min_lines": 30, "contains": ["combobox|select", "今日|7|30"]}
+        ],
+        "key_links": [
+          {"pattern": "service=.*date_from=.*date_to=|service.*date_from|params", "in": "frontend/src/pages/Home.tsx"},
+          {"pattern": "service.*date_from.*date_to", "in": "backend/app/routes/summary.py"}
+        ]
+      },
+      "notes": "筛选状态放在 Home.tsx 顶层（或简单的 URL query string），不要引入额外状态管理库，需求规模不需要。"
+    },
+    {
+      "id": "F6",
+      "description": "5台服务器真实部署联调 + push 容错：后端不可达时 CLI 不崩溃，把本次结果写入本地待重传队列文件（如 ~/.logsift/pending_pushes.jsonl），下次运行 --push 时先尝试补推队列里的旧数据，成功后清空对应条目。",
+      "passes": false,
+      "acceptance": "临时关掉后端服务，执行 `logsift scan --push`：命令正常退出（非 crash），打印明确警告，本地队列文件里出现一条待推送记录；重新启动后端后再跑一次 `logsift scan --push`，观察到队列里的旧记录被补推成功且从队列文件移除，同时新的扫描结果也推送成功。",
+      "wave": 4,
+      "depends": ["F2"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "logsift/push.py", "contains": ["pending_pushes", "retry|except.*ConnectionError|except.*RequestException"]}
+        ],
+        "key_links": [
+          {"pattern": "pending_pushes", "in": "logsift/push.py"}
+        ]
+      },
+      "notes": "队列文件用简单的 JSON Lines 追加写即可，不需要引入消息队列中间件；这是 5 台机器场景下最容易被忽略的边界情况——不做的话某台服务器网络抖动就会永久丢一批数据。"
+    },
+    {
+      "id": "F7",
+      "description": "幂等去重验证与补强：确保同一次扫描结果被重复 push（CLI 重试、或补推队列与正常推送撞车）不会导致数据库中 count 被重复叠加。基于 F2 已经建好的 (server_id, scanned_at) 唯一约束，在 POST /api/scan-results 里做 upsert-or-ignore。",
+      "passes": false,
+      "acceptance": "手动对同一批日志运行两次 `logsift scan --push`（模拟重试），用 sqlite3 查询确认该批次对应的 anomalies 记录只入库一次，Top10 的 count 数值没有翻倍。",
+      "wave": 4,
+      "depends": ["F2"],
+      "must_haves": {
+        "artifacts": [
+          {"path": "backend/app/routes/scan_results.py", "contains": ["INSERT OR IGNORE|ON CONFLICT|IntegrityError"]}
+        ],
+        "key_links": [
+          {"pattern": "ON CONFLICT|OR IGNORE|IntegrityError", "in": "backend/app/routes/scan_results.py"}
+        ]
+      },
+      "notes": "如果 F2 阶段已经把 upsert 逻辑做完，这个 feature 退化为『写测试验证』，也要保留——防止 F2 执行时因为赶时间跳过了这部分。"
+    }
+  ]
+}
+```
+
+## 给编码 agent 的执行提醒
+
+1. Wave1 结束、F1 验收后，**必须等待用户对首页视觉的明确确认**，才能开始 Wave2。这是本 plan 里唯一的人工阻塞点，其余 wave 之间可以连续跑。
+2. 真实仓库结构如果和本文档"假定目录布局"不同，先花 5 分钟核实实际路径，再调整 must_haves 里的 path，不要凭空按本文档路径硬创建重复目录。
+3. 视觉规格章节里的数值是写死的验收标准，不是建议——实现时不要用 UI 库默认的 primary 色、默认圆角替代。
+4. API 契约章节的字段名和结构，CLI 侧（F2/F6/F7）和后端侧（F1/F2/F3/F4）必须完全对齐，改动需要双边同步。

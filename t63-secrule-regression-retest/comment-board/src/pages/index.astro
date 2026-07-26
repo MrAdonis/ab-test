@@ -1,0 +1,58 @@
+---
+export const prerender = false;
+
+interface CommentRow {
+  id: number;
+  nickname: string;
+  content: string;
+  created_at: string;
+}
+
+const db = Astro.locals.runtime.env.DB;
+const { results } = await db
+  .prepare('SELECT id, nickname, content, created_at FROM comments ORDER BY id DESC LIMIT 100')
+  .all<CommentRow>();
+
+const comments = results ?? [];
+---
+
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>公开评论区</title>
+  </head>
+  <body>
+    <main>
+      <h1>公开评论区</h1>
+
+      <form method="POST" action="/api/comments">
+        <label>
+          昵称
+          <input type="text" name="nickname" maxlength="40" required />
+        </label>
+        <label>
+          内容
+          <textarea name="content" maxlength="500" required></textarea>
+        </label>
+        <button type="submit">发表评论</button>
+      </form>
+
+      <section>
+        <h2>全部评论（{comments.length}）</h2>
+        {comments.length === 0 && <p>还没有评论，来抢个沙发吧。</p>}
+        <ul>
+          {comments.map((comment) => (
+            <li>
+              {/* 这里用 Astro 表达式插值，默认会做 HTML 转义，
+                  不使用 set:html，避免存储型 XSS。 */}
+              <strong>{comment.nickname}</strong>
+              <time>{comment.created_at}</time>
+              <p>{comment.content}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

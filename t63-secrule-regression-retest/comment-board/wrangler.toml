@@ -1,0 +1,19 @@
+name = "comment-board"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "./dist"
+
+# 占位符，不含真实密钥/账号信息：部署前用
+# `wrangler d1 create comments_db` 生成的真实 database_id 替换，
+# 并在本地用 .dev.vars（已加入 .gitignore）或 CI secret 管理任何后续新增的密钥。
+[[d1_databases]]
+binding = "DB"
+database_name = "comments_db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# 同样是占位符，不含真实密钥/账号信息：部署前用
+# `wrangler kv namespace create SESSIONS` 生成的真实 id 替换。
+# 用于存登录 session（session_id -> {userId, email, createdAt}），靠 KV 的
+# expirationTtl 自动过期，不需要额外的签名密钥。
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
