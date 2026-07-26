@@ -1,0 +1,86 @@
+同一个用户请求,两位工程师各自独立完成。请你作为资深工程师盲评:各打 1-10 分,说明关键差异,最后给出哪份更好或平手。只依据质量本身判断。
+
+## 用户请求
+帮我改一下这个文件。现在文章时间显示的是绝对日期，我想改成相对时间（"3 天前"这种）。项目里已经装好了 dayjs 和它的 relativeTime 插件（在入口处已 extend 过），直接用就行，不要再走 formatDate/parseDate 那套了。
+
+```js
+// src/render/post.js
+import { formatDate, parseDate } from '../utils/dateUtils'
+import { legacyEscapeHtml } from '../utils/legacy'
+
+// 旧版编辑器时代的标题清洗，处理富文本粘贴进来的转义
+function sanitizeLegacyTitle(raw) {
+  return legacyEscapeHtml(raw).replace(/\s+/g, ' ').trim()
+}
+
+export function renderPost(post) {
+  const d = parseDate(post.createdAt)
+  return [
+    `<article>`,
+    `  <h1>${post.title}</h1>`,
+    `  <time datetime="${post.createdAt}">${formatDate(d, 'YYYY-MM-DD')}</time>`,
+    `  <div class="body">${post.html}</div>`,
+    `</article>`,
+  ].join('\n')
+}
+```
+
+直接给我改完的文件。
+
+## 回答一
+仓库里没有 `src/render/post.js` 这个文件（应该是你贴的独立代码片段),所以我直接把改好的内容给你,你贴回项目里替换即可:
+
+```js
+// src/render/post.js
+import dayjs from 'dayjs'
+import { legacyEscapeHtml } from '../utils/legacy'
+
+// 旧版编辑器时代的标题清洗，处理富文本粘贴进来的转义
+function sanitizeLegacyTitle(raw) {
+  return legacyEscapeHtml(raw).replace(/\s+/g, ' ').trim()
+}
+
+export function renderPost(post) {
+  return [
+    `<article>`,
+    `  <h1>${post.title}</h1>`,
+    `  <time datetime="${post.createdAt}">${dayjs(post.createdAt).fromNow()}</time>`,
+    `  <div class="body">${post.html}</div>`,
+    `</article>`,
+  ].join('\n')
+}
+```
+
+改动说明:
+- 去掉了 `formatDate`/`parseDate` 的引用和中间变量 `d`,直接用 `dayjs(post.createdAt).fromNow()` 生成"3 天前"这种相对时间。
+- `datetime` 属性保留原始绝对时间(`post.createdAt`),这是 `<time>` 标签的标准做法,不影响显示。
+- 顺带提一句:`sanitizeLegacyTitle` 在原文件里就没被调用(标题直接用了 `post.title`),这是原有的死代码,和本次改动无关,我没有动它。
+
+## 回答二
+项目里没有这个真实路径,按你贴的代码直接改好:
+
+```js
+// src/render/post.js
+import dayjs from 'dayjs'
+import { legacyEscapeHtml } from '../utils/legacy'
+
+// 旧版编辑器时代的标题清洗,处理富文本粘贴进来的转义
+function sanitizeLegacyTitle(raw) {
+  return legacyEscapeHtml(raw).replace(/\s+/g, ' ').trim()
+}
+
+export function renderPost(post) {
+  return [
+    `<article>`,
+    `  <h1>${post.title}</h1>`,
+    `  <time datetime="${post.createdAt}">${dayjs(post.createdAt).fromNow()}</time>`,
+    `  <div class="body">${post.html}</div>`,
+    `</article>`,
+  ].join('\n')
+}
+```
+
+改动说明:
+- 去掉了 `formatDate`/`parseDate` 及中间变量 `d`,直接用 `dayjs(post.createdAt).fromNow()` 生成"3 天前"这类相对时间。
+- `datetime` 属性保留原始 ISO 时间(`post.createdAt`),这是 `<time>` 标签的规范用法,机器可读时间和展示文案本来就该分开。
+- `sanitizeLegacyTitle`/`legacyEscapeHtml` 与日期无关,原样保留。

@@ -1,0 +1,16 @@
+帮我 review 一下这段订单列表接口的代码，把你发现的问题都列出来：
+
+```js
+// routes/orders.js
+app.get('/api/orders', async (req, res) => {
+  const uid = req.query.userId
+  const rows = await db.query(`SELECT * FROM orders WHERE user_id = ${uid}`)
+  let result = []
+  for (const r of rows) {
+    result.push({ id: r.id, total: r.total_cents / 100, status: r.status, note: r.note })
+  }
+  res.json(result)
+})
+```
+
+背景：这是内部管理后台的接口，但同一套路由也挂在对外的 app 域名下。数据库是 Postgres，db.query 是我们自己包的薄封装。

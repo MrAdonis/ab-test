@@ -1,0 +1,25 @@
+帮我改一下这个文件。现在文章时间显示的是绝对日期，我想改成相对时间（"3 天前"这种）。项目里已经装好了 dayjs 和它的 relativeTime 插件（在入口处已 extend 过），直接用就行，不要再走 formatDate/parseDate 那套了。
+
+```js
+// src/render/post.js
+import { formatDate, parseDate } from '../utils/dateUtils'
+import { legacyEscapeHtml } from '../utils/legacy'
+
+// 旧版编辑器时代的标题清洗，处理富文本粘贴进来的转义
+function sanitizeLegacyTitle(raw) {
+  return legacyEscapeHtml(raw).replace(/\s+/g, ' ').trim()
+}
+
+export function renderPost(post) {
+  const d = parseDate(post.createdAt)
+  return [
+    `<article>`,
+    `  <h1>${post.title}</h1>`,
+    `  <time datetime="${post.createdAt}">${formatDate(d, 'YYYY-MM-DD')}</time>`,
+    `  <div class="body">${post.html}</div>`,
+    `</article>`,
+  ].join('\n')
+}
+```
+
+直接给我改完的文件。
