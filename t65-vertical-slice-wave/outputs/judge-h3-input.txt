@@ -1,0 +1,97 @@
+用户问题：静态站部署到 Cloudflare Pages 后所有图片 404，本地 dev server 完全正常，要一个排查方案。下面是两份候选回答。盲评：假设质量（是否多假设分列、按可能性排序）/ 验证步骤可执行性（每个假设有没有具体可跑的验证动作）/ 是否先验证后下结论（各 10 分制）。给各自总分（30 分制）和你选哪份 + 一句话理由。不要按有没有猜中某个'标准答案'打分。
+
+===== 回答甲 =====
+最可能的原因排序（按概率从高到低）：
+
+## 1. 图片没有被 git 提交（最常见）
+本地 dev server 是直接读文件系统，不管文件有没有被 git track；但 Cloudflare Pages 是从 git 仓库拉代码构建的。如果图片被 `.gitignore` 意外排除（比如误加了 `*.png`、`/dist`、`/public` 之类规则），本地能看到但线上部署里根本不存在这些文件。
+
+**验证**：`git ls-files | grep -E '\.(png|jpg|jpeg|webp|svg)$'`，确认图片是否真的被追踪。再 `git check-ignore -v <图片路径>` 确认没被规则吃掉。
+
+## 2. 大小写敏感问题
+本地开发机（macOS/Windows）文件系统默认大小写不敏感，代码里写 `Logo.PNG` 引用到实际文件 `logo.png` 本地不会报错。Cloudflare Pages 底层是 Linux，大小写敏感，直接 404。
+
+**验证**：对比代码引用路径和磁盘实际文件名的大小写是否完全一致。
+
+## 3. 构建输出目录配置错误
+CF Pages 设置里的 "Build output directory" 与构建产物实际路径不符，或者静态资源生成器的 `public`/`static` 目录没有被正确复制进最终输出目录。这在换了框架默认约定或手动改过构建命令时很常见。
+
+**验证**：本地跑一次和 CF 上一样的构建命令（如 `npm run build`），检查输出目录里图片是否真的存在。
+
+## 4. base path / assetPrefix 配置不一致
+如果站点部署在子路径下，或者框架（Next.js/Astro/Vite 等）配置了 `base`/`basePath`/`publicPath`，本地 dev server 常常忽略这个前缀直接从根路径 serve，但生产构建会把路径重写，导致引用路径和实际输出路径对不上。
+
+**验证**：直接看线上页面 HTML source 里 `<img src="...">` 的实际 URL，和你以为应该的路径做对比。
+
+## 5. 文件大小超限
+Cloudflare Pages 单文件有 25MiB 限制，超限文件会在部署时静默跳过，不会构建失败。
+
+**验证**：检查有没有异常大的图片文件。
+
+## 6. `_headers` / `_routes.json` 误排除
+如果配置了自定义路由规则，可能意外把图片路径排除在静态资源之外。
+
+---
+
+### 建议的排查顺序
+1. 先 `curl -I https://你的域名/图片路径` 看具体 404 是浏览器缓存/CDN问题还是真的没有这个资源。
+2. `git ls-files` 确认图片被提交（排除原因 1）。
+3. 检查文件名大小写（排除原因 2）。
+4. 本地跑一遍生产构建命令，检查输出目录内容是否含图片，和 CF Pages 后台的 build output directory 设置比对（排除原因 3、4）。
+5. 剩下再查大小限制和 `_headers`/`_routes.json`。
+
+这个顺序的逻辑是：先用一次 curl 定位问题层级（CDN/路径/资源不存在），再按"最容易犯错"到"最少见"的顺序排查，多数情况在第 2、3 步就能定位。
+
+===== 回答乙 =====
+## 最可能的原因（按概率排序）
+
+1. **大小写不匹配**（最常见）— 本地文件系统（macOS/Windows）不区分大小写，Cloudflare 的边缘节点是 Linux，区分大小写。`<img src="/Images/Logo.PNG">` 引用但文件实际是 `logo.png`，本地能跑，线上必 404。
+2. **图片没有被提交到 Git / 被 .gitignore 排除** — Cloudflare Pages 是从你的 Git 仓库构建的，dev server 直接读磁盘文件不受影响，但如果图片被 `.gitignore` 规则误伤（比如某条 `*.png`、`dist/`、`build/` 规则），线上仓库里根本没有这些文件。
+3. **构建产物目录不含图片 / 输出目录配置错误** — 静态站生成器（Astro/Next/Hugo/Jekyll…）dev 模式通常会"透传"某些目录（如 `public/`），但 `build` 命令未必把它们拷到最终输出目录；或者 Cloudflare Pages 项目设置的 "Build output directory" 跟框架实际输出目录（`dist` vs `build` vs `out`）不一致。
+4. **`_redirects` 里的 SPA 兜底规则拦截了图片请求** — 例如 `/* /index.html 200` 放在了图片规则之前，导致 `/images/xxx.png` 请求被重写到 `index.html`，显示为"图裂"。
+5. **路径是绝对路径但站点部署在子路径下**（如 Astro/Vite 的 `base` 配置只在构建时生效，dev 环境是根路径 `/`），导致线上路径多/少一段前缀。
+6. 少见：单文件超过 Cloudflare Pages 的 25MB 限制而被静默跳过；框架自带的图片优化组件（如 Next `<Image>`）需要服务端/边缘函数支持，静态导出后失效。
+
+## 验证顺序（每一步都能快速排除一批可能性）
+
+**第一步：本地跑一次“生产构建”，不要用 dev server**
+```
+npm run build      # 或你项目对应的构建命令
+npx serve dist      # 或对应输出目录，随便一个静态服务器
+```
+用浏览器打开，看图片是否还正常。
+- 如果这里就 404 了 → 问题在构建/框架配置层面（第 3、5、6 条），跟 Cloudflare 无关，本地就能反复调试，效率最高。
+- 如果这里正常 → 问题出在 Cloudflare 特有的环节，继续往下查。
+
+**第二步：检查构建产物里是否真的有图片文件**
+```
+find dist -iname "*.png" -o -iname "*.jpg" -o -iname "*.webp"
+```
+对照页面引用的路径，逐个核对**大小写**是否完全一致（这是最常被忽略的一条）。
+
+**第三步：检查 Git 仓库里图片是否被追踪**
+```
+git ls-files | grep -iE '\.(png|jpg|jpeg|webp|svg|gif)$'
+cat .gitignore
+```
+确认图片确实提交了，且没有被 `.gitignore` 规则误伤。
+
+**第四步：查看 Cloudflare Pages 的构建日志和部署文件列表**
+Dashboard → 该次 Deployment → 查看 build log 里资源是否被正常打包，以及部署详情里能否看到图片文件被上传。
+
+**第五步：检查 `_redirects` / `_headers` 文件**
+确认没有类似 `/* /index.html 200` 的规则排在图片路径规则前面，或者干脆把这类规则改成排除静态资源：
+```
+/*  /index.html  200
+```
+改为只匹配非静态资源路径，或把资源规则放在前面。
+
+**第六步：检查 Pages 项目设置中的 Build output directory**
+Dashboard → Settings → Builds & deployments，确认这里填的目录跟你本地 `npm run build` 实际生成图片的目录一致。
+
+**第七步（如果以上都正常）：检查 base path / 部署路径**
+确认线上访问域名根路径和图片引用路径的前缀假设一致，尤其是用了 Astro/Vite `base` 配置或部署在自定义子路径的情况。
+
+---
+
+如果你告诉我用的是什么框架（Astro / Next / Hugo / 纯 HTML 等）和图片引用方式（`<img src="/xxx">` 还是模块 import），我可以帮你直接定位到具体配置项。

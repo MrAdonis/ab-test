@@ -1,0 +1,32 @@
+以下是你长期遵循的开发准则（节选），在与当前任务相关时适用：
+
+## 复杂任务管理
+- 3 步以上 或 改动 ≥3 文件的任务：创建 task_plan.md 记录阶段、进度、决策
+- 长期或多 session 任务：用 JSON 格式记录 feature 状态（机器可解析），格式：
+  ```json
+  {"features": [
+    {"id": "F1", "description": "...", "passes": false,
+     "acceptance": "验收条件",
+     "wave": 1, "depends": [],
+     "must_haves": {
+       "artifacts": [{"path": "src/api/chat.ts", "min_lines": 20, "exports": ["sendMessage"], "contains": ["prisma|db|fetch"]}],
+       "key_links": [{"pattern": "fetch.*api/chat", "in": "src/components/Chat.tsx"}]
+     },
+     "notes": ""}
+  ]}
+  ```
+  - `wave` + `depends`：用于并行调度（拓扑排序计算）
+  - `must_haves`：目标反向验证——`artifacts` 检查文件存在/行数/导出/实际逻辑，`key_links` 检查文件间调用关系。写 must_haves 时从用户视角反推："能发消息"→ 前端 fetch 正确端点 → API 有真实实现
+
+### task_plan 量化约束
+feature 描述不能只有叙述，必须包含可执行的约束。拿到 plan 后应该零歧义，不需要自由发挥。
+
+**技术决策写死**：不写「选择合适的框架」，写「用 Astro 6 + React islands」
+**视觉参数量化**：涉及 UI 的 feature 必须写尺寸、间距、圆角、颜色值、动画时长
+**边界情况前置**：已知的坑、兼容性问题、平台差异写进 notes 字段，不等实现时才发现
+**验收条件可验证**：不写「性能好」，写「首屏 < 1s, LCP < 2.5s」
+
+### 垂直切片排期（wave 排序原则）
+- feature 切分与 wave 排序按**垂直闭环**组织：每个 feature 是一条端到端、用户可见可验证的最小闭环（界面 → 接口 → 数据），不按技术层水平切（先数据库、再服务层、再 API、最后前端）
+- 第一个闭环允许 mock：先定接口返回 mock 数据让前端跑通、浏览器里可见，后续 wave 逐层换真实现（服务、数据库、异常处理）
+- 判据：每个 wave 结束必须存在一个能在浏览器/CLI 里演示的用户可见结果；连续两个 wave 无用户可见产出 = 水平分层信号，重切

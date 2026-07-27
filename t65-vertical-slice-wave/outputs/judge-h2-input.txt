@@ -1,0 +1,421 @@
+两份 Python CLI 实现（需求：dirstat.py，输入目录路径，统计各扩展名文件数与总字节数，支持 --json 供脚本调用，目录不存在给结构化报错，附 pytest）。两份的 pytest 都已实际运行通过。请按以下标准盲评：
+1. 统一输出 schema（各命令/路径输出结构一致，JSON 可靠）
+2. 结构化错误（失败返回结构化信息，不裸 traceback）
+3. 测试质量（覆盖正常/边界/错误路径）
+4. --help 自描述（含可复制的调用示例）
+5. 代码质量综合
+各 10 分制，给各自总分（50 分制）和你选哪份 + 一句话理由。
+
+===== 实现甲 dirstat.py =====
+#!/usr/bin/env python3
+"""CLI to report per-extension file counts and total sizes under a directory."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+NO_EXT_KEY = "<noext>"
+
+
+class DirstatError(Exception):
+    """Raised for expected, user-facing failures (bad path, etc.)."""
+
+    def __init__(self, code: str, message: str, **details: object) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.details = details
+
+    def to_dict(self) -> dict:
+        return {"error": self.code, "message": self.message, **self.details}
+
+
+def collect_stats(root: Path) -> dict[str, dict[str, int]]:
+    """Walk `root` and return {extension: {"count": n, "bytes": n}}.
+
+    Extension is lowercased without the leading dot; files with no
+    extension are grouped under NO_EXT_KEY. Files that raise OSError
+    when stat'd (permission errors, broken symlinks, ...) are skipped.
+    """
+    stats: dict[str, dict[str, int]] = {}
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        ext = path.suffix.lower().lstrip(".") or NO_EXT_KEY
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        entry = stats.setdefault(ext, {"count": 0, "bytes": 0})
+        entry["count"] += 1
+        entry["bytes"] += size
+    return stats
+
+
+def resolve_root(directory: str) -> Path:
+    root = Path(directory)
+    if not root.exists():
+        raise DirstatError(
+            "path_not_found",
+            f"Directory not found: {directory}",
+            path=str(directory),
+        )
+    if not root.is_dir():
+        raise DirstatError(
+            "not_a_directory",
+            f"Not a directory: {directory}",
+            path=str(directory),
+        )
+    return root
+
+
+def format_text(stats: dict[str, dict[str, int]]) -> str:
+    if not stats:
+        return "No files found."
+    rows = sorted(stats.items(), key=lambda kv: kv[1]["bytes"], reverse=True)
+    ext_width = max(len(ext) for ext, _ in rows)
+    lines = [f"{'EXT':<{ext_width}}  {'COUNT':>8}  {'BYTES':>12}"]
+    for ext, info in rows:
+        lines.append(f"{ext:<{ext_width}}  {info['count']:>8}  {info['bytes']:>12}")
+    return "\n".join(lines)
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="dirstat.py",
+        description="Report file count and total size per extension for a directory.",
+    )
+    parser.add_argument("directory", help="Directory to scan")
+    parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON output"
+    )
+    return parser
+
+
+def run(argv: list[str] | None = None) -> tuple[int, str, str]:
+    """Execute the CLI logic and return (exit_code, stdout, stderr).
+
+    Kept separate from main() so callers (and tests) can invoke dirstat
+    programmatically without touching sys.stdout/sys.stderr/sys.exit.
+    """
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        root = resolve_root(args.directory)
+        stats = collect_stats(root)
+    except DirstatError as exc:
+        payload = exc.to_dict()
+        if args.json:
+            return 1, "", json.dumps(payload) + "\n"
+        return 1, "", f"Error: {payload['message']}\n"
+    except Exception as exc:  # unexpected failure: still report structured, no traceback
+        payload = {"error": "internal_error", "message": str(exc)}
+        if args.json:
+            return 1, "", json.dumps(payload) + "\n"
+        return 1, "", f"Error: {exc}\n"
+
+    if args.json:
+        return 0, json.dumps(stats) + "\n", ""
+    return 0, format_text(stats) + "\n", ""
+
+
+def main(argv: list[str] | None = None) -> int:
+    code, out, err = run(argv)
+    if out:
+        sys.stdout.write(out)
+    if err:
+        sys.stderr.write(err)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+----- 实现甲 test_dirstat.py -----
+import json
+
+import dirstat
+
+
+def test_collect_stats_counts_and_bytes(tmp_path):
+    (tmp_path / "a.txt").write_text("hello")  # 5 bytes
+    (tmp_path / "b.txt").write_text("hi")  # 2 bytes
+    (tmp_path / "c.py").write_text("x" * 10)  # 10 bytes
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "d.txt").write_text("y" * 3)  # 3 bytes, nested
+
+    stats = dirstat.collect_stats(tmp_path)
+
+    assert stats["txt"] == {"count": 3, "bytes": 5 + 2 + 3}
+    assert stats["py"] == {"count": 1, "bytes": 10}
+
+
+def test_collect_stats_groups_no_extension(tmp_path):
+    (tmp_path / "README").write_text("no ext")
+
+    stats = dirstat.collect_stats(tmp_path)
+
+    assert stats[dirstat.NO_EXT_KEY] == {"count": 1, "bytes": len("no ext")}
+
+
+def test_collect_stats_empty_directory(tmp_path):
+    assert dirstat.collect_stats(tmp_path) == {}
+
+
+def test_run_json_output(tmp_path):
+    (tmp_path / "a.md").write_text("abc")
+
+    code, out, err = dirstat.run([str(tmp_path), "--json"])
+
+    assert code == 0
+    assert err == ""
+    payload = json.loads(out)
+    assert payload == {"md": {"count": 1, "bytes": 3}}
+
+
+def test_run_text_output(tmp_path):
+    (tmp_path / "a.md").write_text("abc")
+
+    code, out, err = dirstat.run([str(tmp_path)])
+
+    assert code == 0
+    assert "md" in out
+    assert "1" in out
+
+
+def test_run_missing_directory_json_is_structured(tmp_path):
+    missing = tmp_path / "does-not-exist"
+
+    code, out, err = dirstat.run([str(missing), "--json"])
+
+    assert code == 1
+    assert out == ""
+    payload = json.loads(err)
+    assert payload["error"] == "path_not_found"
+    assert str(missing) in payload["message"]
+
+
+def test_run_missing_directory_text_is_structured_not_traceback(tmp_path):
+    missing = tmp_path / "does-not-exist"
+
+    code, out, err = dirstat.run([str(missing)])
+
+    assert code == 1
+    assert "Traceback" not in err
+    assert "Error:" in err
+
+
+def test_run_path_is_a_file_not_directory(tmp_path):
+    file_path = tmp_path / "file.txt"
+    file_path.write_text("x")
+
+    code, out, err = dirstat.run([str(file_path), "--json"])
+
+    assert code == 1
+    payload = json.loads(err)
+    assert payload["error"] == "not_a_directory"
+
+
+def test_main_returns_exit_code(tmp_path, capsys):
+    (tmp_path / "a.txt").write_text("abc")
+
+    exit_code = dirstat.main([str(tmp_path), "--json"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"txt": {"count": 1, "bytes": 3}}
+
+===== 实现乙 dirstat.py =====
+#!/usr/bin/env python3
+"""CLI: report per-extension file count and total bytes for a directory."""
+import argparse
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+
+class DirstatError(Exception):
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+        super().__init__(message)
+
+
+def collect_stats(root):
+    """Walk `root` recursively and return {ext: {"count": n, "bytes": n}}."""
+    root = Path(root)
+    if not root.exists():
+        raise DirstatError("path_not_found", f"Path does not exist: {root}")
+    if not root.is_dir():
+        raise DirstatError("not_a_directory", f"Path is not a directory: {root}")
+
+    stats = defaultdict(lambda: {"count": 0, "bytes": 0})
+    for entry in root.rglob("*"):
+        if entry.is_file():
+            ext = entry.suffix.lower() if entry.suffix else "(no extension)"
+            stats[ext]["count"] += 1
+            stats[ext]["bytes"] += entry.stat().st_size
+    return dict(stats)
+
+
+def format_text(stats):
+    if not stats:
+        return "No files found."
+    width = max(len(ext) for ext in stats)
+    lines = []
+    for ext in sorted(stats, key=lambda e: (-stats[e]["bytes"], e)):
+        data = stats[ext]
+        lines.append(f"{ext:<{width}}  count={data['count']:<6} bytes={data['bytes']}")
+    return "\n".join(lines)
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="dirstat.py",
+        description="Report file count and total bytes per extension in a directory.",
+    )
+    parser.add_argument("path", help="Directory to scan")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        stats = collect_stats(args.path)
+    except DirstatError as e:
+        error = {"error": e.code, "message": e.message}
+        if args.json:
+            print(json.dumps(error), file=sys.stderr)
+        else:
+            print(f"Error: {e.message}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(stats, indent=2, sort_keys=True))
+    else:
+        print(format_text(stats))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+----- 实现乙 test_dirstat.py -----
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+import dirstat
+
+
+def make_tree(tmp_path):
+    (tmp_path / "a.txt").write_text("hello")
+    (tmp_path / "b.txt").write_text("hi")
+    (tmp_path / "c.py").write_text("print(1)\n")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "d.txt").write_text("x")
+    (sub / "noext").write_text("y")
+    return tmp_path
+
+
+def test_collect_stats_counts_and_bytes(tmp_path):
+    make_tree(tmp_path)
+    stats = dirstat.collect_stats(tmp_path)
+    assert stats[".txt"]["count"] == 3
+    assert stats[".txt"]["bytes"] == len("hello") + len("hi") + len("x")
+    assert stats[".py"]["count"] == 1
+    assert stats[".py"]["bytes"] == len("print(1)\n")
+    assert stats["(no extension)"]["count"] == 1
+
+
+def test_collect_stats_empty_dir(tmp_path):
+    stats = dirstat.collect_stats(tmp_path)
+    assert stats == {}
+
+
+def test_collect_stats_missing_path(tmp_path):
+    missing = tmp_path / "does_not_exist"
+    with pytest.raises(dirstat.DirstatError) as exc_info:
+        dirstat.collect_stats(missing)
+    assert exc_info.value.code == "path_not_found"
+
+
+def test_collect_stats_not_a_directory(tmp_path):
+    f = tmp_path / "file.txt"
+    f.write_text("hi")
+    with pytest.raises(dirstat.DirstatError) as exc_info:
+        dirstat.collect_stats(f)
+    assert exc_info.value.code == "not_a_directory"
+
+
+def test_main_json_output(tmp_path, capsys):
+    make_tree(tmp_path)
+    exit_code = dirstat.main([str(tmp_path), "--json"])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    data = json.loads(captured.out)
+    assert data[".txt"]["count"] == 3
+
+
+def test_main_text_output(tmp_path, capsys):
+    make_tree(tmp_path)
+    exit_code = dirstat.main([str(tmp_path)])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert ".txt" in captured.out
+
+
+def test_main_missing_dir_structured_error_json(tmp_path, capsys):
+    missing = tmp_path / "nope"
+    exit_code = dirstat.main([str(missing), "--json"])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    error = json.loads(captured.err)
+    assert error["error"] == "path_not_found"
+
+
+def test_main_missing_dir_no_traceback(tmp_path, capsys):
+    missing = tmp_path / "nope"
+    exit_code = dirstat.main([str(missing)])
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Traceback" not in captured.err
+    assert "Error" in captured.err
+
+
+def test_cli_subprocess_json(tmp_path):
+    make_tree(tmp_path)
+    script = Path(__file__).parent / "dirstat.py"
+    result = subprocess.run(
+        [sys.executable, str(script), str(tmp_path), "--json"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    data = json.loads(result.stdout)
+    assert data[".py"]["count"] == 1
+
+
+def test_cli_subprocess_missing_dir(tmp_path):
+    missing = tmp_path / "nope"
+    script = Path(__file__).parent / "dirstat.py"
+    result = subprocess.run(
+        [sys.executable, str(script), str(missing)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr

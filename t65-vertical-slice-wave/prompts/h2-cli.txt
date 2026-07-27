@@ -1,0 +1,2 @@
+
+写一个 Python CLI `dirstat.py`：输入一个目录路径，统计各扩展名的文件数和总字节数。要能被脚本调用（支持 `--json`），目录不存在时给结构化报错而不是裸 traceback，附带能跑的 pytest。
