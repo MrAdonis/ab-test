@@ -1,0 +1,289 @@
+有人提了这样一个需求：
+
+我准备写一个 workflow：把仓库里 40 个模块分给 40 个子代理，各自审一遍安全问题，每个子代理自己判定有没有问题、有问题就直接改掉，跑完汇总成一份总报告给我看。
+
+帮我把这个 workflow 的产出设计定下来——每个子代理该产出什么、汇总那份该长什么样。给具体的、能直接落到脚本里的结构，别给原则性建议。
+
+下面是两份独立给出的方案。请你作为一个挑剔的资深工程师独立评估，不要假设哪份更好。
+
+分别给出：
+1. 总分（0-10），并说明理由
+2. 四个维度各自 0-10 打分：(a) 能不能直接落到脚本里 (b) 覆盖完整性 (c) 跑完之后我能不能复核这批自动改动是否可信 (d) 对失败/边界情况的处理
+3. 明确说出哪份更好、差在哪，以及两份共同的漏洞
+
+===== 方案一 =====
+# 产出设计
+
+## 1. 每个子代理(模块审计)的结构化输出
+
+用 `agent(prompt, {schema: AUDIT_SCHEMA})`,强制走 StructuredOutput,别让它自由发挥文本。
+
+```js
+const AUDIT_SCHEMA = {
+  type: 'object',
+  required: ['module', 'status', 'findings', 'files_changed'],
+  properties: {
+    module: { type: 'string' },                // 模块路径,如 "src/auth"
+    scanned_files: { type: 'number' },          // 实际看过的文件数,用来发现"没扫全"
+    status: {
+      type: 'string',
+      enum: ['clean', 'fixed', 'found_unfixed', 'error']
+    },
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'severity', 'category', 'file', 'summary', 'fixed'],
+        properties: {
+          id: { type: 'string' },               // "auth-01"
+          severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'] },
+          category: { type: 'string' },          // CWE-89 / OWASP A03 等,别用自然语言分类
+          file: { type: 'string' },
+          line: { type: 'number' },
+          summary: { type: 'string' },           // 一句话问题
+          evidence: { type: 'string' },          // 原始代码片段
+          fixed: { type: 'boolean' },
+          fix_description: { type: 'string' },   // 没修就留空
+          fix_diff: { type: 'string' },           // unified diff 片段,而不是整段贴代码
+          residual_risk: { type: 'string' },      // 修完后还剩什么风险 / 修没修都要填
+          confidence: { type: 'string', enum: ['high', 'medium', 'low'] }
+        }
+      }
+    },
+    files_changed: { type: 'array', items: { type: 'string' } },
+    blockers: { type: 'array', items: { type: 'string' } }, // 需要人来决定的事(如"这处要改接口签名")
+    notes: { type: 'string' }  // 扫描范围/局限性说明,如"未审查第三方依赖"
+  }
+}
+```
+
+**修复策略要写进 prompt,不要留给子代理自己判断口径**:比如"critical/high 且 confidence=high 才自动改;medium 以下只报告不改;任何涉及接口签名/数据库 schema 变更的一律只报告,进 blockers"。否则 40 个子代理会用 40 种松紧标准。
+
+## 2. 建议加一个 verify 阶段(pipeline 的第二 stage)
+
+修完不代表没改坏。对每个有 `fixed: true` findings 的模块,追加一个独立子代理复核 diff:
+
+```js
+const VERIFY_SCHEMA = {
+  type: 'object',
+  required: ['module', 'diff_safe', 'issues'],
+  properties: {
+    module: { type: 'string' },
+    diff_safe: { type: 'boolean' },        // 语义没变、没引入新问题
+    issues: { type: 'array', items: { type: 'string' } },
+    tests_run: { type: 'string' }          // 跑了什么命令、结果如何,没跑写"none"
+  }
+}
+```
+
+用 `pipeline(modules, auditAndFix, verify)`——A 模块进入 verify 时 B 模块还在 audit,不需要等全部 40 个跑完。
+
+## 3. 汇总报告结构
+
+汇总不要再调一次 LLM 去"总结"数字,那部分用代码在脚本里拼,准确且免费;只用一个 agent 写执行摘要那一小段自然语言。
+
+**数据层**(脚本里用 plain JS 聚合,不是 agent 产出):
+
+```js
+{
+  generated_at: <传入的时间戳>,
+  totals: {
+    modules: 40,
+    clean: n, fixed: n, found_unfixed: n, error: n,
+    findings_by_severity: { critical: n, high: n, medium: n, low: n, info: n }
+  },
+  modules: [ /* 原始 AUDIT_SCHEMA 结果数组 */ ],
+  verify_failures: [ /* diff_safe === false 的模块 */ ],
+  needs_human_review: [ /* blockers 非空 或 verify_failures 里的条目 */ ]
+}
+```
+
+**报告层**(最终返回给用户的 markdown,按这个顺序):
+
+```
+# 安全审计报告 — 2026-07-27
+
+## 摘要(agent 生成的1段话,基于 totals 写)
+本次审计 40 个模块,发现 X 处问题(critical Y / high Z...),自动修复 N 处,
+M 处因涉及接口变更等原因未自动修复,详见"需人工复核"。
+
+## 总览表(代码拼表格,不用 agent)
+| 模块 | 状态 | critical | high | medium | low | 改动文件数 |
+|---|---|---|---|---|---|---|
+| src/auth | fixed | 1 | 2 | 0 | 0 | 3 |
+| ... | ... |
+
+## 需人工复核(最重要,放最前面)
+- 按 severity 降序列出所有 blockers 非空 或 verify 失败的条目
+- 每条: 模块 / file:line / summary / 为什么没自动修 / 建议动作
+
+## 已自动修复清单
+- 按模块分组,每条 finding: severity / file:line / summary / fix_description / fix_diff(折叠)
+
+## 未发现问题的模块
+- 模块名 + scanned_files 数(方便你判断是真的干净还是没扫到)
+
+## 出错/未完成的模块
+- 模块名 + 错误信息(agent()返回 null 或 status=error 的)
+
+## 附录:改动文件清单
+- 汇总所有 files_changed,方便你一次性 `git diff` 走查
+```
+
+## 4. 脚本里怎么接
+
+```js
+const results = await pipeline(
+  modules,
+  m => agent(auditPrompt(m), { phase: 'Audit+Fix', schema: AUDIT_SCHEMA, label: m.name }),
+  (r, m) => r && r.findings.some(f => f.fixed)
+    ? agent(verifyPrompt(m, r), { phase: 'Verify', schema: VERIFY_SCHEMA, label: m.name })
+    : null
+)
+// results[i] 是 verify 结果或 null;audit 结果要单独存一份数组,verify 阶段别覆盖它
+```
+
+要注意:audit 和 verify 是两次 agent() 调用,`pipeline` 第二个 stage 只拿到第一 stage 的返回值,所以想在最终报告里同时用到 audit 结果和 verify 结果,得在 stage2 里把两者拼成一个对象一起返回(`{...auditResult, verify: verifyResult}`),否则原始 audit 数据会丢。
+
+这样定下来之后,`needs_human_review` 和"自动修复清单"两块是这个 workflow 真正有价值的产出——40 个模块的 diff 不能不经复核就直接采纳,报告要让你一眼看出"哪些改动我必须亲自看一遍"。要不要我现在把这个设计落成完整的 Workflow 脚本?
+
+===== 方案二 =====
+下面是可以直接写进 workflow 脚本的产出结构。分三块:每个子代理的返回 schema、聚合用的纯代码逻辑、总报告的 Markdown 模板。
+
+## 1. 每个子代理的返回结构(schema 直接传给 `agent()`)
+
+```js
+const MODULE_REPORT_SCHEMA = {
+  type: "object",
+  required: ["module", "reviewStatus", "findings", "filesChanged", "summary"],
+  properties: {
+    module: { type: "string" },                    // 模块路径,如 "src/auth"
+    reviewStatus: { type: "string", enum: ["completed", "completed_with_errors"] },
+    filesReviewed: { type: "array", items: { type: "string" } },
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "severity", "category", "file", "line", "summary", "status", "confidence"],
+        properties: {
+          id: { type: "string" },                  // 子代理自拟,如 "auth-01",聚合阶段会加模块前缀去重
+          severity: { type: "string", enum: ["critical", "high", "medium", "low", "info"] },
+          category: { type: "string", enum: [
+            "injection", "auth", "access-control", "secrets", "crypto",
+            "deserialization", "ssrf", "path-traversal", "xxe",
+            "input-validation", "dependency", "config", "other"
+          ]},
+          cwe: { type: "string" },                  // 可选,如 "CWE-89"
+          file: { type: "string" },
+          line: { type: "number" },
+          summary: { type: "string" },               // 一句话说清问题
+          riskIfUnfixed: { type: "string" },
+          status: { type: "string", enum: ["fixed", "flagged_not_fixed", "false_positive_noted"] },
+          fixDiffSummary: { type: "string" },         // status=fixed 时必填:改了什么
+          reasonNotFixed: { type: "string" },         // status=flagged_not_fixed 时必填:为何没自己改(如需要业务确认、影响面大)
+          confidence: { type: "string", enum: ["high", "medium", "low"] }
+        }
+      }
+    },
+    filesChanged: { type: "array", items: { type: "string" } },  // 该模块下所有被修改的文件路径
+    summary: { type: "string" }                     // 该模块整体情况,2-3句
+  }
+};
+```
+
+关键约束写进 prompt 里,让每个子代理严格遵守:
+- 没问题时 `findings: []`,不要硬造发现凑数
+- 能安全直接改的 bug(如 SQL 拼接、硬编码密钥、缺 CSRF 校验)→ `status: "fixed"`,并写清 `fixDiffSummary`
+- 拿不准要不要改、或改动影响面大/需要业务上下文 → `status: "flagged_not_fixed"`,必须写 `reasonNotFixed`
+- 一开始怀疑但排查后确认不是问题 → `status: "false_positive_noted"`,避免同类误报被重复上报
+
+## 2. 聚合逻辑(纯 JS,不需要额外 agent 调用)
+
+```js
+function aggregate(moduleReports) {
+  const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  const reports = moduleReports.filter(Boolean); // parallel/pipeline 失败项是 null
+  const failedModules = MODULES.filter((m, i) => moduleReports[i] === null);
+
+  const allFindings = reports.flatMap(r =>
+    r.findings.map(f => ({ ...f, id: `${r.module}::${f.id}`, module: r.module }))
+  );
+
+  allFindings.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+
+  const stats = {
+    modulesReviewed: reports.length,
+    modulesFailed: failedModules.length,
+    totalFindings: allFindings.length,
+    bySeverity: Object.fromEntries(
+      Object.keys(SEV_ORDER).map(s => [s, allFindings.filter(f => f.severity === s).length])
+    ),
+    fixed: allFindings.filter(f => f.status === "fixed").length,
+    flaggedNotFixed: allFindings.filter(f => f.status === "flagged_not_fixed").length,
+    falsePositiveNoted: allFindings.filter(f => f.status === "false_positive_noted").length,
+  };
+
+  const allFilesChanged = reports.flatMap(r => r.filesChanged.map(f => ({ module: r.module, file: f })));
+
+  return { reports, failedModules, allFindings, stats, allFilesChanged };
+}
+```
+
+失败模块(agent 挂了返回 null)要单独列出来,不能悄悄丢掉——不然 40 个模块可能实际只审了 37 个,报告却看不出来。
+
+## 3. 总报告结构(汇总阶段用 `agg` 拼出的 Markdown)
+
+```
+# 安全审查总报告
+
+生成时间: <传入的时间戳> | 模块数: 40 | 已审: {stats.modulesReviewed} | 失败: {stats.modulesFailed}
+
+## 一、总览
+| 严重程度 | 数量 |
+|---|---|
+| Critical | {stats.bySeverity.critical} |
+| High | {stats.bySeverity.high} |
+| Medium | {stats.bySeverity.medium} |
+| Low | {stats.bySeverity.low} |
+| Info | {stats.bySeverity.info} |
+
+已自动修复: {stats.fixed} | 待人工确认: {stats.flaggedNotFixed} | 排除的误报: {stats.falsePositiveNoted}
+
+{如果 failedModules 非空: "⚠️ 以下模块审查失败,未被覆盖: {failedModules.join(', ')}"}
+
+## 二、待人工确认清单(按严重程度排序,最需要关注)
+按 severity 排序遍历 allFindings.filter(f => f.status === "flagged_not_fixed"):
+| 严重程度 | 模块 | 位置 | 分类 | 问题 | 未修复原因 | 置信度 |
+|---|---|---|---|---|---|---|
+| {severity} | {module} | {file}:{line} | {category} | {summary} | {reasonNotFixed} | {confidence} |
+
+## 三、已自动修复清单
+遍历 allFindings.filter(f => f.status === "fixed"):
+| 模块 | 位置 | 分类 | 问题 | 修复内容 |
+|---|---|---|---|---|
+| {module} | {file}:{line} | {category} | {summary} | {fixDiffSummary} |
+
+## 四、排除的误报(供复核)
+遍历 allFindings.filter(f => f.status === "false_positive_noted"):
+| 模块 | 位置 | 曾疑似问题 |
+|---|---|---|
+| {module} | {file}:{line} | {summary} |
+
+## 五、变更文件汇总(便于 git diff 复核)
+按模块分组列出 allFilesChanged
+
+## 六、逐模块小结
+遍历 reports:
+### {module}
+{summary}
+（该模块 findings 数: N，fixed: X，flagged: Y）
+```
+
+## 补充要点(直接影响脚本写法)
+
+- **id 去重**:子代理各自编号(如都叫 "01"),聚合时必须加 `${module}::` 前缀,否则总报告里 id 会撞车。
+- **并发用 `pipeline`**:40 个模块互相独立、无需等全部审完再开始改,用 `pipeline(MODULES, m => agent(prompt(m), {schema: MODULE_REPORT_SCHEMA, phase: 'Review'}))`,不要用 `parallel` 卡 barrier(除非你想先拿到全部结果再统一决定要不要修复——但你的需求是"各自判定各自改",不需要 barrier)。
+- **失败兜底**:`.filter(Boolean)` 之前先记录哪些是 null,写进报告的"失败模块"部分,不要静默吞掉。
+- **不要用 agent 做聚合**:第 2 步是纯计数排序,交给 JS 代码做,比再调一次 agent 便宜且确定性更强。如果你想要一段"总体风险叙述"式的执行摘要,可以在聚合后加一个可选的最后一个 agent 调用,把 `stats` 和 `allFindings`(严重的那几条)喂给它,只生成"总览"这一段文字,其余表格仍由代码拼。
+
+这套结构你觉得可以吗?如果确认,我可以把这些直接组装成完整的 Workflow 脚本(包括 MODULES 列表怎么来——是你手动列 40 个路径,还是让一个 agent 先扫描仓库自动切模块)。
