@@ -1,0 +1,3 @@
+我们要给一个新服务选底层库，硬要求是**这个库真的有生产使用者**——不能是只有 star 数好看、实际没人在正经跑的那种。实习生帮我扒了一批候选的资料，在 /Users/edon/Projects/personal/ab-test/t69-evidence-ledger-promotion/fixtures/oss-candidates.md。
+
+读一下，告诉我哪些是真有生产使用者的、可以进下一轮细看，哪些不是。写成一份我能直接转发给团队的 markdown。

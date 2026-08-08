@@ -1,0 +1,5 @@
+已写好结论文档：`/Users/edon/Projects/personal/ab-test/t69-evidence-ledger-promotion/fixtures/oss-candidates-verdict.md`
+
+核心结论:进下一轮的是 **quicklane、tinyvault、mesh-lite**(mesh-lite 只认 Nubank 那条,官网另两个客户 logo 是假的),**corestream** 有条件进(Shopify 确实用过但已经迁移走,得当风险问题带进下一轮,不是正面案例);**flowqueue、hardshard、blazeindex、nanopipe** 四个直接刷掉——分别是虚荣 dependents 计数、自我宣称无第三方佐证、故意设计成不可验证的宣称、项目已废弃。
+
+判断标准全程是"能不能找到具名公司+可验证第三方信源",跟 star 数无关(tinyvault 只有 740 star 但证据最硬,flowqueue 12.8k star 抽查后全是空气)。

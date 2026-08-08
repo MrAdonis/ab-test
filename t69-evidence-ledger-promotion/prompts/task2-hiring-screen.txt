@@ -1,0 +1,5 @@
+帮我筛一批 SRE 候选人，硬门槛是**真的在生产环境跑过 Kubernetes**。材料在 /Users/edon/Projects/personal/ab-test/t69-evidence-ledger-promotion/fixtures/candidates-k8s.md，HR 从各渠道扒的，格式很乱。
+
+说一下上次的情况：上一批你帮我筛出来的人，约来面试才发现有一半只在教程里跑过 k8s，简历上写得挺唬人。这次别再让这种混进来。
+
+输出一份我能直接发给面试官的 markdown。
