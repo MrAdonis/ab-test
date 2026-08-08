@@ -1,0 +1,2 @@
+task1-remote-work: 甲=A 乙=B
+task2-startup-lesson: 甲=B 乙=A
