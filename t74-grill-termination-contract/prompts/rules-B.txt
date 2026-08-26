@@ -1,0 +1,11 @@
+Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+
+Ask the questions one at a time.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
+
+Before each question, state in one sentence what my previous answer changed in your understanding.
+
+Only ask questions whose answer could change the conclusion. Stop as soon as you have enough to act on — there is no question quota to fill.
+
+When you stop, close by laying out: the question I originally asked; the question I actually need to solve; what is now established as fact; what remains an unverified assumption; the variable most likely to change the conclusion; and one specific, actionable next question.
