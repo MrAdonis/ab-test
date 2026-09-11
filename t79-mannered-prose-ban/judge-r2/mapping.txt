@@ -1,0 +1,3 @@
+task1-narrow-scope: 甲=A  乙=B
+task2-landing-copy: 甲=B  乙=A
+（相对轮 1 全部翻转，控位置偏置）

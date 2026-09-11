@@ -1,0 +1,3 @@
+t77 盲评映射（判完再看）
+task1-release-note: 甲=B  乙=A
+task2-weekly-note:  甲=A  乙=B

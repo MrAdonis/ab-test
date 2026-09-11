@@ -1,0 +1,3 @@
+t78 盲评映射（判完再看）
+task1-market-analysis: 甲=A  乙=B
+task2-tech-post:       甲=B  乙=A
