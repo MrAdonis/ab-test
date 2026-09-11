@@ -1,0 +1,6 @@
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+11 项 pytest 全部通过，CLI 手动验证也正常（结构化 JSON 输出、目录不存在时返回 `success: false` 而非裸 traceback）。
+
+已创建两个文件：
+- `/private/tmp/t80h-gen-lRAmOs/dirstat.py` — 核心 CLI，`collect_stats()` 递归统计各扩展名的文件数和字节数，`--json` 支持结构化输出，路径不存在/非目录抛出自定义 `DirstatError` 子类而非裸异常
+- `/private/tmp/t80h-gen-lRAmOs/test_dirstat.py` — 11 个 pytest 用例，覆盖统计正确性、递归、大小写扩展名归一、空目录、缺失路径/非目录的结构化错误、JSON 与人类可读两种输出模式
