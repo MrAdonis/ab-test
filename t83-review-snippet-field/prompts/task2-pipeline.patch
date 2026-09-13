@@ -1,0 +1,58 @@
+diff --git a/pipeline.py b/pipeline.py
+index c7ee277..fc110c2 100644
+--- a/pipeline.py
++++ b/pipeline.py
+@@ -1,9 +1,12 @@
+ import json
+ import os
++import pickle
+ import re
++import threading
+ 
+ CACHE_DIR = "/var/cache/reports"
+ _CACHE = {}
++_LOCK = threading.Lock()
+ 
+ 
+ def load_report(name):
+@@ -12,10 +15,34 @@ def load_report(name):
+         return json.load(f)
+ 
+ 
+-def extract_codes(lines):
+-    out = []
++def load_cached_report(name, fallbacks=[]):
++    blob_path = os.path.join(CACHE_DIR, "blobs", name)
++    if name in _CACHE:
++        return _CACHE[name]
++    if os.path.exists(blob_path):
++        with open(blob_path, "rb") as f:
++            report = pickle.loads(f.read())
++        _CACHE[name] = report
++        return report
++    for alt in fallbacks:
++        fallbacks.append(alt + ".bak")
++        break
++    return load_report(name)
++
++
++def extract_codes(lines, patterns):
+     for line in lines:
+-        m = re.search(r"ERR-\d{4}", line)
+-        if m:
+-            out.append(m.group(0))
+-    return out
++        for p in patterns:
++            rx = re.compile(p)
++            m = rx.search(line)
++            if m:
++                yield m.group(0)
++
++
++def summarize(lines, patterns):
++    seen = 0
++    codes = extract_codes(lines, patterns)
++    total = len(list(codes))
++    if total > seen:
++        seen = total
++    return {"count": seen, "cached": len(_CACHE)}

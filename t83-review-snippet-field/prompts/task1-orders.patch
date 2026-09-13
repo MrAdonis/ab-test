@@ -1,0 +1,53 @@
+diff --git a/src/orders.ts b/src/orders.ts
+index 13fd486..af7bb52 100644
+--- a/src/orders.ts
++++ b/src/orders.ts
+@@ -9,14 +9,44 @@ export type OrderResponse = {
+   currency: string;
+ };
+ 
++async function lookupCoupon(code: string) {
++  const rows = await db.$queryRawUnsafe(
++    `SELECT * FROM coupons WHERE code = '${code}' AND redeemed = false`
++  );
++  return rows[0];
++}
++
+ export async function createOrder(req: Request) {
+   const body = await req.json();
++  console.log("incoming order", req.headers.get("authorization"), body);
++
+   const items = await db.item.findMany({ where: { id: { in: body.itemIds } } });
+   const subtotal = items.reduce((acc, it) => acc + it.price, 0);
+ 
+-  const order = await db.order.create({
+-    data: { userId: body.userId, total: subtotal, currency: "USD" },
+-  });
++  let stockOk = true;
++  for (const it of items) {
++    const level = await db.stock.findUnique({ where: { itemId: it.id } });
++    if (!level || level.qty < 1) stockOk = false;
++  }
++  if (!stockOk) return json({ error: "out_of_stock" }, 409);
++
++  let total = subtotal;
++  if (body.coupon?.startsWith(COUPON_PREFIX)) {
++    const coupon = await lookupCoupon(body.coupon);
++    if (coupon) {
++      const pct = parseFloat(coupon.percent_off);
++      total = subtotal * (1 - pct / 100);
++      await db.coupon.update({ where: { id: coupon.id }, data: { redeemed: true } });
++    }
++  }
+ 
+-  return json({ id: order.id, total: order.total, currency: order.currency });
++  try {
++    const order = await db.order.create({
++      data: { userId: body.userId, total, currency: "USD" },
++    });
++    return json({ id: order.id, amount: order.total, currency: order.currency });
++  } catch (e) {
++    console.log("order failed", e);
++    return json({ error: "internal" }, 500);
++  }
+ }
