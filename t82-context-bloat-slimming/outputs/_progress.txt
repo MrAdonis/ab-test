@@ -1,0 +1,7 @@
+done base H1 rc=0
+done slim H1 rc=0
+done base H3 rc=0
+done slim H3 rc=0
+done slim H2 rc=0
+done base H2 rc=0
+ALLDONE

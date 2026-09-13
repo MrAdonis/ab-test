@@ -1,0 +1,9 @@
+已把两份文件落盘跑通：**27 项测试全部通过**（0.11s），并另外手动探了 argparse 错误路径、超深目录、断链、硬链接、空目录、Unicode、`--sort name` 等测试没覆盖的边界。
+
+正确性: 9 - 测试与实现完全自洽且我独立复跑通过，大小写归一、dotfile 归为无扩展名、`assets.css/` 目录不误计、符号链接环用 (st_dev, st_ino) 真正挡住了；扣分点是 `_walk` 用递归而非迭代，Linux 上超过 ~1000 层会 RecursionError 落进 EINTERNAL，且 `--follow-symlinks` 下断链被静默丢弃、连 `skipped` 记录都没有。
+
+接口契约: 8 - 信封 `{success, data|error}` 统一、错误码枚举齐全、退出码有文档、`--help` 里那段 script contract 加 jq 示例确实够一个程序调用方自己上手；但 argparse 的用法错误（缺 path、`--sort nope`）完全绕过信封——我实测 `--json` 时 stdout 为空、裸 usage 打到 stderr、退出码同样是 2，与运行时错误撞码，且没有 `totals.skipped` 或"部分结果"专用退出码（根目录不可读时返回 success:true / files:0），data 的字段 schema 也没在 help 里写明。
+
+可维护性: 9 - collect_stats / format_table / build_parser / main 分层干净，核心可作为库直接调用，docstring 说清了"为什么"而非"是什么"，没有任何为扩展而扩展的配置层或类层级；只有零碎瑕疵：`NO_EXT` 是死常量，`visited: set` 缺泛型参数，`_walk` 六个位置参数已经到了该收进小 dataclass 的边缘。
+
+总分: 26

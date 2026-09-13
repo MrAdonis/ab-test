@@ -1,0 +1,27 @@
+写好了两个文件：
+
+- `/tmp/wk-5/dirstat.py`
+- `/tmp/wk-5/test_dirstat.py`
+
+**没能验证**：本会话的 Bash 权限在第一次调用时就被拒了（且说明本会话不会再有审批入口），所以我既没确认你机器上的 pytest 版本，也没跑过这套测试。下面的行为描述是按代码逻辑写的，不是实测结果。请你自己跑一次：
+
+```
+cd /tmp/wk-5 && python3 -m pytest test_dirstat.py -q
+```
+
+脚本契约（写在 `--help` 里，脚本方读字段不解析表格）：
+
+```
+{"success": true,  "data": {...}}      exit 0
+{"success": false, "error": {"code","message","path"}}   exit 2
+```
+
+错误码 `ENOENT` / `ENOTDIR` / `EACCES` / `EIO` / `EINTERNAL`。`main()` 外层兜了一层 `except Exception`，任何意外异常都转成 `EINTERNAL` 的 JSON，裸 traceback 不会漏到调用方。人类模式下错误走 stderr，`--json` 模式下错误也走 stdout——因为脚本只读 stdout，把失败塞进 stderr 会让它拿到空输入。
+
+几个刻意的判断，不同意就说：
+
+扩展名按 `os.path.splitext` 取并小写，所以 `.PY` 和 `.py` 合并，而 `.gitignore` 算「无扩展名」（JSON 里是 `""`，表格里显示 `(none)`）。默认递归整棵树，`--no-recursive` 只看直接子项。默认不跟随符号链接（`--follow-symlinks` 打开，带 dev/ino 环路保护）。子目录读不动（权限）时不整体失败，而是记进 `data.skipped` 继续走完——这点如果你要严格语义，得自己判 `skipped` 非空。
+
+测试覆盖计数/递归开关/大小写合并/dotfile/空目录/三种排序/符号链接与环路/ENOENT/ENOTDIR/EINTERNAL/不可读子目录降级/两种输出格式，外加一条真开 subprocess 验退出码和 stdout 的端到端用例。POSIX 权限位和 symlink 相关的用例在非 POSIX 和 root 下会自动 skip。
+
+考虑到 CLAUDE.md 里「新增检查器要做反向验证」那条：我没法在这里给你红→绿两段证据。你跑通后如果想确认测试真的有牙，把 `dirstat.py` 里 `extension_of` 的 `.lower()` 删掉，`test_extension_matching_is_case_insensitive` 应该变红。

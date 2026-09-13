@@ -1,0 +1,525 @@
+===== dirstat.py =====
+#!/usr/bin/env python3
+"""Count files and total bytes per file extension in a directory tree.
+
+Designed to be called both by humans and by scripts/agents:
+every invocation with --json emits one JSON object with the same
+top-level shape, on stdout, on success and on failure alike.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from typing import Any, Iterator
+
+__version__ = "1.0.0"
+
+NO_EXTENSION = "(none)"
+
+EXIT_OK = 0
+EXIT_ERROR = 1
+# exit code 2 (bad usage) is emitted by argparse itself
+
+
+class DirStatError(Exception):
+    """A user-facing failure with a stable machine-readable code."""
+
+    def __init__(self, code: str, message: str, path: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.path = path
+
+    def to_dict(self) -> dict[str, str]:
+        return {"code": self.code, "message": self.message, "path": self.path}
+
+
+def _envelope(data: Any = None, error: dict[str, str] | None = None) -> dict[str, Any]:
+    return {"success": error is None, "data": data, "error": error}
+
+
+def _validate_dir(path: str) -> str:
+    """Return the absolute path, or raise DirStatError. Never raises OSError."""
+    abspath = os.path.abspath(os.path.expanduser(path))
+    try:
+        os.stat(abspath)
+    except FileNotFoundError:
+        raise DirStatError("not_found", f"No such directory: {abspath}", abspath) from None
+    except PermissionError:
+        raise DirStatError(
+            "permission_denied", f"Permission denied: {abspath}", abspath
+        ) from None
+    except OSError as exc:
+        raise DirStatError("os_error", f"{exc.strerror or exc}: {abspath}", abspath) from None
+
+    if not os.path.isdir(abspath):
+        raise DirStatError("not_a_directory", f"Not a directory: {abspath}", abspath)
+    if not os.access(abspath, os.R_OK | os.X_OK):
+        raise DirStatError("permission_denied", f"Permission denied: {abspath}", abspath)
+    return abspath
+
+
+def extension_of(filename: str) -> str:
+    """'.py' for foo.py, NO_EXTENSION for 'README' and for dotfiles like '.gitignore'.
+
+    Dotfiles have no extension by os.path.splitext's rule ('.gitignore' -> ('.gitignore', '')),
+    which is what we want: '.gitignore' is a name, not a type.
+    """
+    ext = os.path.splitext(filename)[1]
+    return ext.lower() if ext else NO_EXTENSION
+
+
+def _walk(root: str, recursive: bool, skipped: list[dict[str, str]]) -> Iterator[os.DirEntry]:
+    """Yield non-symlink file entries. Unreadable dirs are recorded, not raised.
+
+    Symlinks (to files or dirs) are never followed and never counted, so a
+    symlink loop can't inflate the totals or hang the walk.
+    """
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as it:
+                entries = list(it)
+        except PermissionError:
+            skipped.append({"path": current, "reason": "permission_denied"})
+            continue
+        except OSError as exc:
+            skipped.append({"path": current, "reason": exc.strerror or "os_error"})
+            continue
+
+        for entry in entries:
+            try:
+                if entry.is_symlink():
+                    skipped.append({"path": entry.path, "reason": "symlink"})
+                elif entry.is_dir(follow_symlinks=False):
+                    if recursive:
+                        stack.append(entry.path)
+                elif entry.is_file(follow_symlinks=False):
+                    yield entry
+            except OSError as exc:
+                skipped.append({"path": entry.path, "reason": exc.strerror or "os_error"})
+
+
+def scan(path: str, recursive: bool = True, sort: str = "bytes") -> dict[str, Any]:
+    """Scan `path` and return the `data` payload. Raises DirStatError on bad input."""
+    root = _validate_dir(path)
+
+    counts: dict[str, int] = {}
+    sizes: dict[str, int] = {}
+    skipped: list[dict[str, str]] = []
+
+    for entry in _walk(root, recursive, skipped):
+        try:
+            size = entry.stat(follow_symlinks=False).st_size
+        except OSError as exc:
+            skipped.append({"path": entry.path, "reason": exc.strerror or "os_error"})
+            continue
+        ext = extension_of(entry.name)
+        counts[ext] = counts.get(ext, 0) + 1
+        sizes[ext] = sizes.get(ext, 0) + size
+
+    rows = [
+        {"extension": ext, "count": counts[ext], "bytes": sizes[ext]} for ext in counts
+    ]
+    keyfunc = {
+        "bytes": lambda r: (-r["bytes"], r["extension"]),
+        "count": lambda r: (-r["count"], r["extension"]),
+        "ext": lambda r: (r["extension"],),
+    }[sort]
+    rows.sort(key=keyfunc)
+
+    return {
+        "path": root,
+        "recursive": recursive,
+        "total_files": sum(counts.values()),
+        "total_bytes": sum(sizes.values()),
+        "extensions": rows,
+        "skipped": skipped,
+    }
+
+
+def _human_bytes(n: int) -> str:
+    step = 1024.0
+    value = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < step or unit == "TB":
+            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}"
+        value /= step
+    return f"{value:.1f} TB"  # unreachable, kept for type completeness
+
+
+def format_text(data: dict[str, Any]) -> str:
+    rows = data["extensions"]
+    lines = [data["path"], ""]
+    if not rows:
+        lines.append("(no files)")
+    else:
+        ext_w = max(9, *(len(r["extension"]) for r in rows))
+        lines.append(f"{'EXTENSION'.ljust(ext_w)}  {'FILES':>7}  {'BYTES':>14}  SIZE")
+        for r in rows:
+            lines.append(
+                f"{r['extension'].ljust(ext_w)}  {r['count']:>7}  {r['bytes']:>14,}  "
+                f"{_human_bytes(r['bytes'])}"
+            )
+        lines.append("")
+        lines.append(
+            f"{'TOTAL'.ljust(ext_w)}  {data['total_files']:>7}  {data['total_bytes']:>14,}  "
+            f"{_human_bytes(data['total_bytes'])}"
+        )
+    if data["skipped"]:
+        lines.append("")
+        lines.append(f"skipped {len(data['skipped'])} entries (symlink/unreadable):")
+        for s in data["skipped"][:10]:
+            lines.append(f"  {s['reason']}: {s['path']}")
+        if len(data["skipped"]) > 10:
+            lines.append(f"  ... and {len(data['skipped']) - 10} more")
+    return "\n".join(lines)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="dirstat",
+        description="Count files and total bytes per extension in a directory tree.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""\
+Examples:
+  dirstat.py .                         # recursive stats for the current directory
+  dirstat.py /var/log --no-recursive   # top level only
+  dirstat.py . --json                  # machine-readable, one JSON object on stdout
+  dirstat.py . --json | jq '.data.extensions[0]'
+  dirstat.py . --json --sort count     # order rows by file count instead of bytes
+
+For scripts and agents:
+  Always pass --json and read fields; never parse the human table.
+  Output is always one JSON object: {"success": bool, "data": obj|null, "error": obj|null}
+  On failure success=false and error={"code","message","path"}; there is no traceback.
+  error.code is one of: not_found, not_a_directory, permission_denied, os_error.
+  Exit codes: 0 success, 1 structured error, 2 bad command-line usage.
+
+Notes:
+  Symlinks are never followed and never counted; they are listed in data.skipped.
+  Files with no extension (README, .gitignore) are grouped under "(none)".
+  Extensions are lowercased, so .PNG and .png share one row.
+""",
+    )
+    parser.add_argument("path", help="directory to scan")
+    parser.add_argument(
+        "--json", action="store_true", dest="as_json", help="emit JSON instead of a table"
+    )
+    parser.add_argument(
+        "--no-recursive",
+        action="store_false",
+        dest="recursive",
+        help="scan only the top level (default: recurse)",
+    )
+    parser.add_argument(
+        "--sort",
+        choices=("bytes", "count", "ext"),
+        default="bytes",
+        help="row ordering (default: bytes, descending)",
+    )
+    parser.add_argument("--version", action="version", version=f"dirstat {__version__}")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        data = scan(args.path, recursive=args.recursive, sort=args.sort)
+    except DirStatError as exc:
+        if args.as_json:
+            json.dump(_envelope(error=exc.to_dict()), sys.stdout)
+            sys.stdout.write("\n")
+        else:
+            print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
+        return EXIT_ERROR
+
+    if args.as_json:
+        json.dump(_envelope(data=data), sys.stdout)
+        sys.stdout.write("\n")
+    else:
+        print(format_text(data))
+    return EXIT_OK
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+===== test_dirstat.py =====
+"""Tests for dirstat.py — library surface + CLI end-to-end."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+
+import pytest
+
+import dirstat
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SCRIPT = os.path.join(HERE, "dirstat.py")
+
+# os.geteuid is absent on Windows; treat that as "not root" so the
+# permission-bit tests are attempted rather than crashing at collection.
+IS_ROOT = getattr(os, "geteuid", lambda: 1)() == 0
+
+
+def run_cli(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, SCRIPT, *args], capture_output=True, text=True, timeout=60
+    )
+
+
+@pytest.fixture
+def tree(tmp_path):
+    """a.py(5) b.py(10) c.txt(3) README(1) .gitignore(2) sub/d.py(20) sub/e.TXT(4)"""
+    (tmp_path / "a.py").write_bytes(b"x" * 5)
+    (tmp_path / "b.py").write_bytes(b"x" * 10)
+    (tmp_path / "c.txt").write_bytes(b"x" * 3)
+    (tmp_path / "README").write_bytes(b"x")
+    (tmp_path / ".gitignore").write_bytes(b"xx")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "d.py").write_bytes(b"x" * 20)
+    (sub / "e.TXT").write_bytes(b"x" * 4)
+    return tmp_path
+
+
+def by_ext(data):
+    return {r["extension"]: (r["count"], r["bytes"]) for r in data["extensions"]}
+
+
+# --- scan() -----------------------------------------------------------------
+
+
+def test_scan_recursive_counts_and_bytes(tree):
+    data = dirstat.scan(str(tree))
+    assert by_ext(data) == {
+        ".py": (3, 35),
+        ".txt": (2, 7),  # c.txt + sub/e.TXT, extension lowercased
+        "(none)": (2, 3),  # README + .gitignore
+    }
+    assert data["total_files"] == 7
+    assert data["total_bytes"] == 45
+    assert data["skipped"] == []
+
+
+def test_scan_non_recursive_stops_at_top_level(tree):
+    data = dirstat.scan(str(tree), recursive=False)
+    assert by_ext(data) == {".py": (2, 15), ".txt": (1, 3), "(none)": (2, 3)}
+    assert data["total_files"] == 5
+
+
+def test_scan_returns_absolute_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "f.py").write_bytes(b"x")
+    got = dirstat.scan(".")["path"]
+    assert os.path.isabs(got)
+    # realpath on both sides: getcwd() resolves symlinked path components
+    assert os.path.realpath(got) == os.path.realpath(str(tmp_path))
+
+
+def test_scan_empty_directory(tmp_path):
+    data = dirstat.scan(str(tmp_path))
+    assert data["extensions"] == []
+    assert (data["total_files"], data["total_bytes"]) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "sort, expected",
+    [
+        # bytes: 35 / 7 / 3
+        ("bytes", [".py", ".txt", "(none)"]),
+        # count: 3 / 2 / 2 -- .txt and (none) tie, broken by name ("(" < ".")
+        ("count", [".py", "(none)", ".txt"]),
+        ("ext", ["(none)", ".py", ".txt"]),
+    ],
+)
+def test_scan_sort_orders(tree, sort, expected):
+    data = dirstat.scan(str(tree), sort=sort)
+    assert [r["extension"] for r in data["extensions"]] == expected
+
+
+def test_scan_sort_ties_break_on_extension_name(tmp_path):
+    for name in ("x.b", "y.a", "z.c"):
+        (tmp_path / name).write_bytes(b"xx")
+    data = dirstat.scan(str(tmp_path), sort="bytes")
+    assert [r["extension"] for r in data["extensions"]] == [".a", ".b", ".c"]
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("a.py", ".py"),
+        ("a.PY", ".py"),
+        ("archive.tar.gz", ".gz"),
+        ("README", "(none)"),
+        (".gitignore", "(none)"),
+        ("weird.", "(none)"),  # splitext -> ('weird.', ''), no extension
+    ],
+)
+def test_extension_of(name, expected):
+    assert dirstat.extension_of(name) == expected
+
+
+# --- error paths ------------------------------------------------------------
+
+
+def test_scan_missing_dir_raises_structured_error(tmp_path):
+    missing = tmp_path / "nope"
+    with pytest.raises(dirstat.DirStatError) as exc:
+        dirstat.scan(str(missing))
+    assert exc.value.code == "not_found"
+    assert exc.value.path == str(missing)
+
+
+def test_scan_file_instead_of_dir(tmp_path):
+    f = tmp_path / "a.py"
+    f.write_bytes(b"x")
+    with pytest.raises(dirstat.DirStatError) as exc:
+        dirstat.scan(str(f))
+    assert exc.value.code == "not_a_directory"
+
+
+@pytest.mark.skipif(IS_ROOT, reason="root bypasses permission bits")
+def test_scan_unreadable_root_is_permission_denied(tmp_path):
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    os.chmod(locked, 0o000)
+    try:
+        with pytest.raises(dirstat.DirStatError) as exc:
+            dirstat.scan(str(locked))
+        assert exc.value.code == "permission_denied"
+    finally:
+        os.chmod(locked, 0o755)
+
+
+@pytest.mark.skipif(IS_ROOT, reason="root bypasses permission bits")
+def test_unreadable_subdir_is_skipped_not_fatal(tree):
+    locked = tree / "locked"
+    locked.mkdir()
+    (locked / "hidden.py").write_bytes(b"x" * 999)
+    os.chmod(locked, 0o000)
+    try:
+        data = dirstat.scan(str(tree))
+        assert data["total_bytes"] == 45  # unreadable contents excluded
+        assert [s["reason"] for s in data["skipped"]] == ["permission_denied"]
+        assert data["skipped"][0]["path"] == str(locked)
+    finally:
+        os.chmod(locked, 0o755)
+
+
+# --- symlinks ---------------------------------------------------------------
+
+
+def test_symlinks_are_skipped_not_followed(tmp_path):
+    (tmp_path / "real.py").write_bytes(b"x" * 8)
+    os.symlink(tmp_path / "real.py", tmp_path / "link.py")
+    data = dirstat.scan(str(tmp_path))
+    assert by_ext(data) == {".py": (1, 8)}
+    assert data["skipped"] == [{"path": str(tmp_path / "link.py"), "reason": "symlink"}]
+
+
+def test_symlink_loop_terminates(tmp_path):
+    (tmp_path / "a.py").write_bytes(b"x")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    os.symlink(tmp_path, sub / "loop")
+    data = dirstat.scan(str(tmp_path))  # must not hang or recurse forever
+    assert data["total_files"] == 1
+
+
+def test_broken_symlink_is_skipped(tmp_path):
+    os.symlink(tmp_path / "does-not-exist", tmp_path / "dangling.py")
+    data = dirstat.scan(str(tmp_path))
+    assert data["total_files"] == 0
+    assert data["skipped"][0]["reason"] == "symlink"
+
+
+# --- CLI --------------------------------------------------------------------
+
+
+def test_cli_json_success_envelope(tree):
+    proc = run_cli(str(tree), "--json")
+    assert proc.returncode == 0
+    payload = json.loads(proc.stdout)
+    assert payload["success"] is True
+    assert payload["error"] is None
+    assert payload["data"]["total_files"] == 7
+    assert payload["data"]["total_bytes"] == 45
+
+
+def test_cli_json_error_envelope_no_traceback(tmp_path):
+    missing = tmp_path / "nope"
+    proc = run_cli(str(missing), "--json")
+    assert proc.returncode == 1
+    assert "Traceback" not in proc.stderr
+    payload = json.loads(proc.stdout)  # errors still land on stdout as JSON
+    assert payload["success"] is False
+    assert payload["data"] is None
+    assert payload["error"]["code"] == "not_found"
+    assert payload["error"]["path"] == str(missing)
+
+
+def test_cli_text_error_is_readable_not_traceback(tmp_path):
+    proc = run_cli(str(tmp_path / "nope"))
+    assert proc.returncode == 1
+    assert proc.stdout == ""
+    assert "Traceback" not in proc.stderr
+    assert "not_found" in proc.stderr
+
+
+def test_cli_missing_path_argument_is_usage_error():
+    proc = run_cli()
+    assert proc.returncode == 2
+    assert "Traceback" not in proc.stderr
+
+
+def test_cli_bad_sort_value_is_usage_error(tree):
+    proc = run_cli(str(tree), "--sort", "nonsense")
+    assert proc.returncode == 2
+    assert "Traceback" not in proc.stderr
+
+
+def test_cli_text_output_lists_extensions_and_total(tree):
+    proc = run_cli(str(tree))
+    assert proc.returncode == 0
+    assert ".py" in proc.stdout
+    assert "TOTAL" in proc.stdout
+    assert "45" in proc.stdout
+
+
+def test_cli_no_recursive_flag(tree):
+    proc = run_cli(str(tree), "--json", "--no-recursive")
+    data = json.loads(proc.stdout)["data"]
+    assert data["recursive"] is False
+    assert data["total_files"] == 5
+
+
+def test_cli_json_is_a_single_line_object(tree):
+    proc = run_cli(str(tree), "--json")
+    assert len([ln for ln in proc.stdout.splitlines() if ln.strip()]) == 1
+
+
+def test_cli_is_idempotent(tree):
+    first = run_cli(str(tree), "--json").stdout
+    second = run_cli(str(tree), "--json").stdout
+    assert first == second
+
+
+def test_cli_help_documents_json_contract():
+    proc = run_cli("--help")
+    assert proc.returncode == 0
+    assert "Examples:" in proc.stdout
+    assert "--json" in proc.stdout
+    assert "not_found" in proc.stdout
+
+

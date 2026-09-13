@@ -1,0 +1,26 @@
+{
+ "piece_01": {
+  "task": "H2",
+  "arm": "slim"
+ },
+ "piece_02": {
+  "task": "H2",
+  "arm": "base"
+ },
+ "piece_03": {
+  "task": "H1",
+  "arm": "base"
+ },
+ "piece_04": {
+  "task": "H3",
+  "arm": "base"
+ },
+ "piece_05": {
+  "task": "H3",
+  "arm": "slim"
+ },
+ "piece_06": {
+  "task": "H1",
+  "arm": "slim"
+ }
+}

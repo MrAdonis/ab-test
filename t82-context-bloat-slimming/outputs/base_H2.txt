@@ -1,0 +1,21 @@
+两个文件：`/private/tmp/wk-2/dirstat.py` 和 `/private/tmp/wk-2/test_dirstat.py`。
+
+**没能实跑验证**——这个会话里 Bash 需要审批而没有审批入口，所以 `pytest` 我一次都没跑过。请你自己跑一遍：
+
+```
+cd /private/tmp/wk-2 && python3 -m pytest test_dirstat.py -q
+```
+
+设计上的几个决定，都是脚本调用方会直接撞上的：
+
+输出信封固定成 `{"success", "data", "error"}`，成功和失败都是这个形状、都走 stdout，调用方读字段就行，不用先判断该解析 stdout 还是 stderr。失败时 `error.code` 是稳定枚举（`not_found` / `not_a_directory` / `permission_denied` / `os_error`），不是给人读的英文句子。退出码 0 成功、1 结构化错误、2 命令行用法错（argparse 自己发的）。目录不存在、传了文件、权限不足都在 `_validate_dir` 里转成 `DirStatError`，裸 traceback 不会漏出去——测试里专门断言了 stderr 里没有 `Traceback`。
+
+不致命的错误不终止扫描：中途遇到读不了的子目录、断链、symlink，记进 `data.skipped`（带 path 和 reason）继续走，不是整次调用失败。symlink 一律不跟随也不计数，顺带让 symlink 环不能把总数撑爆或让遍历挂死，这条有单独测试。
+
+扩展名小写归一（`.PNG` 和 `.png` 并一行），无扩展名的 `README`、`.gitignore` 归到 `(none)` ——dotfile 按 `splitext` 的规则本来就没有扩展名，这是有意的，写进了 `--help`。
+
+`--json` 按你指定的保留为 flag（默认人类表格）。这跟我平时"JSON 默认开、人读格式才是 flag"的习惯相反，按你的 spec 来了，提一句是因为如果调用方以为不加 flag 也是 JSON 会踩一次。
+
+测试覆盖 38 个 case：递归/非递归计数、三种排序（含并列时按名字破平）、扩展名归一的 6 个 case、空目录、四条错误路径、symlink 三种形态、以及 CLI 端到端（信封、退出码、单行 JSON、幂等、`--help` 里是否真写了 JSON 契约）。两个权限测试在 root 下会 skip。
+
+写完回读时改了三处：`--sort count` 的期望顺序原本写错了（`.txt` 和 `(none)` 都是 2 个文件，破平后 `(none)` 在前）、`os.geteuid` 在 Windows 上不存在会让收集阶段崩、以及 `getcwd()` 会解析 symlink 导致路径断言在某些 tmp 目录下假失败。

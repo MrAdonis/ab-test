@@ -1,0 +1,615 @@
+===== dirstat.py =====
+#!/usr/bin/env python3
+"""Count files and total bytes per file extension under a directory.
+
+Designed to be called from scripts: `--json` prints a single JSON object on
+stdout with a stable `{"success": ..., "data"|"error": ...}` shape, and every
+failure path (missing directory, unreadable path, unexpected bug) is reported
+through that same shape instead of a traceback.
+"""
+
+from __future__ import annotations
+
+import argparse
+import errno
+import json
+import os
+import stat
+import sys
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+EXIT_OK = 0
+EXIT_ERROR = 2
+
+NO_EXT = ""
+NO_EXT_LABEL = "(none)"
+
+SORT_KEYS = ("bytes", "count", "name")
+
+EXAMPLES = """\
+examples:
+  dirstat.py .                        # human-readable table of the cwd
+  dirstat.py /var/log --json          # machine-readable, one JSON object on stdout
+  dirstat.py src --no-recursive       # only direct children of src/
+  dirstat.py . --json --sort count    # rank extensions by file count
+  dirstat.py . --json | jq '.data.totals.bytes'
+
+script contract:
+  - stdout with --json is always exactly one JSON object, never a traceback.
+  - success: {"success": true,  "data":  {...}}
+    failure: {"success": false, "error": {"code", "message", "path"}}
+  - exit code 0 on success, 2 on error. Read the fields, do not parse the
+    human-readable table.
+  - error codes: ENOENT (no such path), ENOTDIR (path is not a directory),
+    EACCES (permission denied), EIO (other OS error), EINTERNAL (unexpected).
+  - data.skipped lists paths that could not be read; it does not fail the run,
+    so check it if you need the totals to be complete.
+"""
+
+
+class DirStatError(Exception):
+    """An expected, reportable failure carrying a machine-readable code."""
+
+    def __init__(self, code: str, message: str, path: Optional[str] = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.path = path
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"code": self.code, "message": self.message, "path": self.path}
+
+
+def _code_for_errno(err: Optional[int]) -> str:
+    if err == errno.ENOENT:
+        return "ENOENT"
+    if err == errno.ENOTDIR:
+        return "ENOTDIR"
+    if err in (errno.EACCES, errno.EPERM):
+        return "EACCES"
+    return "EIO"
+
+
+def _oserror_record(path: str, exc: OSError) -> Dict[str, str]:
+    return {
+        "path": path,
+        "code": _code_for_errno(exc.errno),
+        "message": exc.strerror or str(exc),
+    }
+
+
+def extension_of(name: str) -> str:
+    """Return the lowercased extension of a file name, "" when there is none.
+
+    Follows os.path.splitext, so a leading-dot name like ".gitignore" counts as
+    having no extension rather than as an extension called ".gitignore".
+    """
+    return os.path.splitext(name)[1].lower()
+
+
+def _walk(
+    root: str,
+    recursive: bool,
+    follow_symlinks: bool,
+    counts: Dict[str, List[int]],
+    skipped: List[Dict[str, str]],
+    visited: set,
+) -> None:
+    try:
+        with os.scandir(root) as it:
+            entries = list(it)
+    except OSError as exc:
+        skipped.append(_oserror_record(root, exc))
+        return
+
+    subdirs: List[str] = []
+    for entry in entries:
+        try:
+            if entry.is_dir(follow_symlinks=follow_symlinks):
+                if recursive:
+                    subdirs.append(entry.path)
+                continue
+            if not entry.is_file(follow_symlinks=follow_symlinks):
+                continue
+            size = entry.stat(follow_symlinks=follow_symlinks).st_size
+        except OSError as exc:
+            skipped.append(_oserror_record(entry.path, exc))
+            continue
+
+        bucket = counts.setdefault(extension_of(entry.name), [0, 0])
+        bucket[0] += 1
+        bucket[1] += size
+
+    for path in subdirs:
+        if follow_symlinks:
+            # Only meaningful when following links: guard against cycles.
+            try:
+                st = os.stat(path)
+            except OSError as exc:
+                skipped.append(_oserror_record(path, exc))
+                continue
+            key = (st.st_dev, st.st_ino)
+            if key in visited:
+                continue
+            visited.add(key)
+        _walk(path, recursive, follow_symlinks, counts, skipped, visited)
+
+
+def collect_stats(
+    path: str,
+    recursive: bool = True,
+    follow_symlinks: bool = False,
+    sort_by: str = "bytes",
+) -> Dict[str, Any]:
+    """Walk `path` and return the `data` payload.
+
+    Raises DirStatError when `path` itself cannot be used as a directory.
+    Unreadable entries *below* `path` are reported in data["skipped"] instead.
+    """
+    if sort_by not in SORT_KEYS:
+        raise ValueError(f"sort_by must be one of {SORT_KEYS}, got {sort_by!r}")
+
+    target = os.path.abspath(os.path.expanduser(path))
+    try:
+        st = os.stat(target)
+    except OSError as exc:
+        code = _code_for_errno(exc.errno)
+        message = {
+            "ENOENT": f"no such directory: {target}",
+            "ENOTDIR": f"not a directory: {target}",
+            "EACCES": f"permission denied: {target}",
+        }.get(code, f"{exc.strerror or exc}: {target}")
+        raise DirStatError(code, message, target) from exc
+
+    if not stat.S_ISDIR(st.st_mode):
+        raise DirStatError("ENOTDIR", f"not a directory: {target}", target)
+
+    counts: Dict[str, List[int]] = {}
+    skipped: List[Dict[str, str]] = []
+    visited = {(st.st_dev, st.st_ino)}
+    _walk(target, recursive, follow_symlinks, counts, skipped, visited)
+
+    extensions = [
+        {"extension": ext, "files": files, "bytes": total}
+        for ext, (files, total) in counts.items()
+    ]
+    sort_key = {
+        "bytes": lambda row: (-row["bytes"], -row["files"], row["extension"]),
+        "count": lambda row: (-row["files"], -row["bytes"], row["extension"]),
+        "name": lambda row: (row["extension"],),
+    }[sort_by]
+    extensions.sort(key=sort_key)
+
+    return {
+        "path": target,
+        "recursive": recursive,
+        "follow_symlinks": follow_symlinks,
+        "totals": {
+            "files": sum(row["files"] for row in extensions),
+            "bytes": sum(row["bytes"] for row in extensions),
+            "extensions": len(extensions),
+        },
+        "extensions": extensions,
+        "skipped": skipped,
+    }
+
+
+def format_table(data: Dict[str, Any]) -> str:
+    rows: List[Tuple[str, str, str]] = [
+        (
+            row["extension"] or NO_EXT_LABEL,
+            f"{row['files']:,}",
+            f"{row['bytes']:,}",
+        )
+        for row in data["extensions"]
+    ]
+    totals = data["totals"]
+    footer = ("TOTAL", f"{totals['files']:,}", f"{totals['bytes']:,}")
+    header = ("EXTENSION", "FILES", "BYTES")
+
+    widths = [
+        max(len(cell[i]) for cell in (header, footer, *rows)) for i in range(3)
+    ]
+
+    def line(cells: Sequence[str]) -> str:
+        return "  ".join(
+            [cells[0].ljust(widths[0]), cells[1].rjust(widths[1]), cells[2].rjust(widths[2])]
+        ).rstrip()
+
+    out = [line(header)]
+    out.extend(line(row) for row in rows)
+    out.append("-" * (sum(widths) + 4))
+    out.append(line(footer))
+    return "\n".join(out)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="dirstat.py",
+        description="Count files and total bytes per file extension under a directory.",
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("path", help="directory to scan")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="print one JSON object on stdout instead of a table (for scripts)",
+    )
+    parser.add_argument(
+        "--no-recursive",
+        action="store_false",
+        dest="recursive",
+        help="only look at direct children (default: walk the whole tree)",
+    )
+    parser.add_argument(
+        "--follow-symlinks",
+        action="store_true",
+        help="follow symlinked files and directories (default: skip them; cycles are guarded)",
+    )
+    parser.add_argument(
+        "--sort",
+        choices=SORT_KEYS,
+        default="bytes",
+        dest="sort_by",
+        help="order of the extensions list (default: bytes, descending)",
+    )
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        data = collect_stats(
+            args.path,
+            recursive=args.recursive,
+            follow_symlinks=args.follow_symlinks,
+            sort_by=args.sort_by,
+        )
+    except DirStatError as exc:
+        return _fail(exc, args.as_json)
+    except Exception as exc:  # no bare traceback reaches the caller
+        return _fail(
+            DirStatError("EINTERNAL", f"{type(exc).__name__}: {exc}", args.path),
+            args.as_json,
+        )
+
+    if args.as_json:
+        print(json.dumps({"success": True, "data": data}, ensure_ascii=False))
+    else:
+        print(format_table(data))
+        for item in data["skipped"]:
+            print(
+                f"dirstat: skipped [{item['code']}] {item['path']}: {item['message']}",
+                file=sys.stderr,
+            )
+    return EXIT_OK
+
+
+def _fail(exc: DirStatError, as_json: bool) -> int:
+    if as_json:
+        print(json.dumps({"success": False, "error": exc.to_dict()}, ensure_ascii=False))
+    else:
+        print(f"dirstat: error [{exc.code}]: {exc.message}", file=sys.stderr)
+    return EXIT_ERROR
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+
+===== test_dirstat.py =====
+import json
+import os
+import subprocess
+import sys
+
+import pytest
+
+import dirstat
+
+
+def write(path, content=b""):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return path
+
+
+@pytest.fixture
+def tree(tmp_path):
+    """A small fixed tree: 2 .py (30 bytes), 1 .md (5), 1 extensionless (2),
+    plus 1 nested .py (100)."""
+    write(tmp_path / "a.py", b"x" * 10)
+    write(tmp_path / "b.py", b"x" * 20)
+    write(tmp_path / "readme.md", b"hello")
+    write(tmp_path / "Makefile", b"ok")
+    write(tmp_path / "pkg" / "deep.py", b"x" * 100)
+    return tmp_path
+
+
+def run_cli(args, capsys):
+    code = dirstat.main([str(a) for a in args])
+    captured = capsys.readouterr()
+    return code, captured.out, captured.err
+
+
+def run_json(args, capsys):
+    code, out, err = run_cli(list(args) + ["--json"], capsys)
+    return code, json.loads(out), err
+
+
+def by_ext(payload):
+    return {row["extension"]: (row["files"], row["bytes"]) for row in payload["extensions"]}
+
+
+# --- counting -------------------------------------------------------------
+
+
+def test_recursive_counts_and_bytes(tree):
+    data = dirstat.collect_stats(str(tree))
+    assert by_ext(data) == {
+        ".py": (3, 130),
+        ".md": (1, 5),
+        "": (1, 2),
+    }
+    assert data["totals"] == {"files": 5, "bytes": 137, "extensions": 3}
+    assert data["skipped"] == []
+
+
+def test_no_recursive_skips_subdirectories(tree):
+    data = dirstat.collect_stats(str(tree), recursive=False)
+    assert by_ext(data)[".py"] == (2, 30)
+    assert data["totals"]["files"] == 4
+
+
+def test_extension_matching_is_case_insensitive(tmp_path):
+    write(tmp_path / "a.PY", b"1")
+    write(tmp_path / "b.py", b"22")
+    assert by_ext(dirstat.collect_stats(str(tmp_path))) == {".py": (2, 3)}
+
+
+def test_dotfiles_count_as_no_extension(tmp_path):
+    write(tmp_path / ".gitignore", b"abc")
+    assert by_ext(dirstat.collect_stats(str(tmp_path))) == {"": (1, 3)}
+
+
+def test_empty_directory(tmp_path):
+    data = dirstat.collect_stats(str(tmp_path))
+    assert data["extensions"] == []
+    assert data["totals"] == {"files": 0, "bytes": 0, "extensions": 0}
+
+
+def test_directories_are_not_counted_as_files(tmp_path):
+    (tmp_path / "assets.css").mkdir()  # a directory that looks like a file
+    write(tmp_path / "real.css", b"x")
+    assert by_ext(dirstat.collect_stats(str(tmp_path))) == {".css": (1, 1)}
+
+
+@pytest.mark.skipif(os.name != "posix", reason="expanduser reads HOME on POSIX only")
+def test_path_is_absolute_and_expands_user(tree, monkeypatch):
+    monkeypatch.setenv("HOME", str(tree))
+    data = dirstat.collect_stats("~")
+    assert data["path"] == os.path.abspath(str(tree))
+
+
+# --- sorting --------------------------------------------------------------
+
+
+def test_default_sort_is_bytes_descending(tree):
+    order = [row["extension"] for row in dirstat.collect_stats(str(tree))["extensions"]]
+    assert order == [".py", ".md", ""]
+
+
+def test_sort_by_count_then_name(tmp_path):
+    write(tmp_path / "big.bin", b"x" * 999)
+    write(tmp_path / "a.txt", b"1")
+    write(tmp_path / "b.txt", b"2")
+    data = dirstat.collect_stats(str(tmp_path), sort_by="count")
+    assert [row["extension"] for row in data["extensions"]] == [".txt", ".bin"]
+
+    data = dirstat.collect_stats(str(tmp_path), sort_by="name")
+    assert [row["extension"] for row in data["extensions"]] == [".bin", ".txt"]
+
+
+def test_invalid_sort_key_rejected(tmp_path):
+    with pytest.raises(ValueError):
+        dirstat.collect_stats(str(tmp_path), sort_by="nope")
+
+
+# --- symlinks -------------------------------------------------------------
+
+
+@pytest.mark.skipif(os.name != "posix", reason="symlink semantics differ on Windows")
+def test_symlinks_skipped_by_default_and_followed_on_request(tmp_path):
+    target = tmp_path / "outside"
+    write(target / "hidden.log", b"x" * 7)
+    root = tmp_path / "root"
+    root.mkdir()
+    write(root / "kept.txt", b"ab")
+    (root / "link").symlink_to(target, target_is_directory=True)
+
+    assert by_ext(dirstat.collect_stats(str(root))) == {".txt": (1, 2)}
+    assert by_ext(dirstat.collect_stats(str(root), follow_symlinks=True)) == {
+        ".txt": (1, 2),
+        ".log": (1, 7),
+    }
+
+
+@pytest.mark.skipif(os.name != "posix", reason="symlink semantics differ on Windows")
+def test_symlink_cycle_does_not_hang(tmp_path):
+    write(tmp_path / "a.txt", b"x")
+    (tmp_path / "loop").symlink_to(tmp_path, target_is_directory=True)
+    data = dirstat.collect_stats(str(tmp_path), follow_symlinks=True)
+    assert by_ext(data) == {".txt": (1, 1)}
+
+
+# --- error handling -------------------------------------------------------
+
+
+def test_missing_directory_raises_structured_error(tmp_path):
+    with pytest.raises(dirstat.DirStatError) as excinfo:
+        dirstat.collect_stats(str(tmp_path / "nope"))
+    assert excinfo.value.code == "ENOENT"
+
+
+def test_missing_directory_json_output(tmp_path, capsys):
+    code, payload, err = run_json([tmp_path / "nope"], capsys)
+    assert code == dirstat.EXIT_ERROR
+    assert payload["success"] is False
+    assert payload["error"]["code"] == "ENOENT"
+    assert str(tmp_path / "nope") in payload["error"]["message"]
+    assert payload["error"]["path"].endswith("nope")
+    assert "data" not in payload
+    assert err == ""
+
+
+def test_missing_directory_human_output(tmp_path, capsys):
+    code, out, err = run_cli([tmp_path / "nope"], capsys)
+    assert code == dirstat.EXIT_ERROR
+    assert out == ""
+    assert err.startswith("dirstat: error [ENOENT]:")
+    assert "Traceback" not in err
+
+
+def test_file_argument_reports_enotdir(tmp_path, capsys):
+    target = write(tmp_path / "a.py", b"x")
+    code, payload, _ = run_json([target], capsys)
+    assert code == dirstat.EXIT_ERROR
+    assert payload["error"]["code"] == "ENOTDIR"
+
+
+def test_unexpected_exception_becomes_einternal(tmp_path, capsys, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr(dirstat, "collect_stats", boom)
+    code, payload, _ = run_json([tmp_path], capsys)
+    assert code == dirstat.EXIT_ERROR
+    assert payload["error"]["code"] == "EINTERNAL"
+    assert "kaboom" in payload["error"]["message"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignores mode bits")
+def test_unreadable_subdirectory_is_skipped_not_fatal(tmp_path):
+    write(tmp_path / "ok.txt", b"xy")
+    locked = tmp_path / "locked"
+    write(locked / "secret.txt", b"zzz")
+    os.chmod(locked, 0o000)
+    try:
+        data = dirstat.collect_stats(str(tmp_path))
+    finally:
+        os.chmod(locked, 0o700)
+
+    assert by_ext(data) == {".txt": (1, 2)}
+    assert len(data["skipped"]) == 1
+    assert data["skipped"][0]["code"] == "EACCES"
+    assert data["skipped"][0]["path"].endswith("locked")
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignores mode bits")
+def test_unreadable_root_directory_reports_empty_plus_skip(tmp_path, capsys):
+    # stat() on the directory itself still succeeds for its owner, so this is
+    # not a hard error: the run succeeds with zero files and one skip entry.
+    locked = tmp_path / "locked"
+    locked.mkdir(mode=0o000)
+    try:
+        code, payload, _ = run_json([locked], capsys)
+    finally:
+        os.chmod(locked, 0o700)
+    assert code == dirstat.EXIT_OK
+    assert payload["data"]["totals"]["files"] == 0
+    assert [item["code"] for item in payload["data"]["skipped"]] == ["EACCES"]
+
+
+# --- CLI contract ---------------------------------------------------------
+
+
+def test_json_success_envelope(tree, capsys):
+    code, payload, err = run_json([tree], capsys)
+    assert code == dirstat.EXIT_OK
+    assert err == ""
+    assert payload["success"] is True
+    assert set(payload) == {"success", "data"}
+    assert payload["data"]["totals"]["bytes"] == 137
+    assert payload["data"]["recursive"] is True
+
+
+def test_json_output_is_exactly_one_object(tree, capsys):
+    _, out, _ = run_cli([tree, "--json"], capsys)
+    assert len(out.strip().splitlines()) == 1
+
+
+def test_no_recursive_flag(tree, capsys):
+    _, payload, _ = run_json([tree, "--no-recursive"], capsys)
+    assert payload["data"]["recursive"] is False
+    assert payload["data"]["totals"]["files"] == 4
+
+
+def test_human_table_contains_rows_and_total(tree, capsys):
+    code, out, err = run_cli([tree], capsys)
+    assert code == dirstat.EXIT_OK
+    assert err == ""
+    lines = out.splitlines()
+    assert lines[0].split() == ["EXTENSION", "FILES", "BYTES"]
+    assert any(line.startswith(".py") and "130" in line for line in lines)
+    assert any(line.startswith("(none)") for line in lines)
+    assert lines[-1].startswith("TOTAL") and "137" in lines[-1]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignores mode bits")
+def test_skipped_paths_warn_on_stderr_only(tmp_path, capsys):
+    write(tmp_path / "ok.txt", b"xy")
+    locked = tmp_path / "locked"
+    write(locked / "secret.txt", b"zzz")
+    os.chmod(locked, 0o000)
+    try:
+        code, out, err = run_cli([tmp_path], capsys)
+    finally:
+        os.chmod(locked, 0o700)
+    assert code == dirstat.EXIT_OK
+    assert "skipped" not in out
+    assert "dirstat: skipped [EACCES]" in err
+
+
+def test_help_documents_the_script_contract(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        dirstat.main(["--help"])
+    assert excinfo.value.code == 0
+    out = capsys.readouterr().out
+    assert "--json" in out
+    assert "examples:" in out
+    assert '"success"' in out
+
+
+def test_missing_path_argument_exits_nonzero(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        dirstat.main([])
+    assert excinfo.value.code != 0
+
+
+# --- end-to-end through a real subprocess ---------------------------------
+
+
+def test_subprocess_exit_codes_and_stdout(tree):
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dirstat.py")
+
+    ok = subprocess.run(
+        [sys.executable, script, str(tree), "--json"], capture_output=True, text=True
+    )
+    assert ok.returncode == 0
+    assert json.loads(ok.stdout)["data"]["totals"]["files"] == 5
+
+    bad = subprocess.run(
+        [sys.executable, script, str(tree / "nope"), "--json"], capture_output=True, text=True
+    )
+    assert bad.returncode == 2
+    assert json.loads(bad.stdout)["error"]["code"] == "ENOENT"
+    assert "Traceback" not in bad.stderr
+
+

@@ -1,0 +1,6 @@
+base H1 -> /tmp/wk-1
+base H2 -> /tmp/wk-2
+base H3 -> /tmp/wk-3
+slim H1 -> /tmp/wk-4
+slim H2 -> /tmp/wk-5
+slim H3 -> /tmp/wk-6

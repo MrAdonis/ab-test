@@ -1,0 +1,19 @@
+我把两份文件落盘实际跑了一遍：**30 passed, 1 failed**。
+
+失败的是 `test_extension_of[weird.-(none)]`：测试注释写着 `splitext('weird.') -> ('weird.', '')`，但实际是 `('weird', '.')`，所以 `extension_of("weird.")` 返回 `"."` 而非 `"(none)"`。即实现和测试对同一个边界的认知不一致，且错的是作者写在注释里的那条"事实"。
+
+另外两点实测：
+- `scan(path, sort="nope")` 抛裸 `KeyError`，而 docstring 声称 "Raises DirStatError on bad input"——CLI 侧有 argparse `choices` 兜住，库侧没有。
+- `dirstat.py big | head` 会在 stderr 留下 `BrokenPipeError`（退出码仍为 0，无 traceback），属小瑕疵。
+
+其余边界实测都对：符号链接环不死循环、不可读子目录降级为 `skipped` 而非致命、不可读根目录报 `permission_denied`、空目录、`.PNG/.png` 合并、排序并列按扩展名稳定破平、`--json` 单行对象、错误路径无 traceback。迭代式 `_walk`（显式栈而非递归）也避免了深目录爆栈。
+
+---
+
+正确性: 7 - 核心统计逻辑、符号链接/权限/空目录等硬边界实测全对且防御到位，但自带测试开箱即红一条，根因是作者对 `splitext` 尾点语义的错误认知同时写进了注释和断言，且 `sort` 非法值在库层漏出 `KeyError` 违反了自己的 docstring 契约。
+
+接口契约: 9 - `{success, data, error}` 信封在成功/失败两条路径上形状严格一致，错误码枚举、退出码 0/1/2、"给脚本和 agent 的用法"都直接写进 `--help`，`skipped` 字段让部分结果可审计而不是静默少算；扣分在错误 JSON 走 stdout（虽有文档但会污染 `> out.json`）且信封里没有 `schema_version`。
+
+可维护性: 8 - scan/format/CLI 三层切分干净、命名直白、规模克制无过度设计，`DirStatError` 带 code 的做法恰到好处；`_human_bytes` 留了自己都标注 unreachable 的死代码、keyfunc 字典每次调用重建，以及那条把错误认知固化下来的注释，是仅有的几处噪声。
+
+总分: 24

@@ -1,0 +1,62 @@
+这个症状的原因分布很集中,先给判断:**最可能是文件名大小写,其次是图片压根没进 git 仓库**。两者合起来能解释绝大多数"本地全好、Pages 全 404"的静态站故障,而且都有一个共同机制——你的 macOS 本地环境在系统性地隐藏问题。
+
+macOS 的 APFS 默认不区分大小写,`Hero.PNG` 和 `hero.png` 在本地是同一个文件,dev server 随便你怎么写都能 serve。Cloudflare 边缘的存储严格区分。更阴险的是 git 在 macOS 上默认 `core.ignorecase=true`,你在本地把文件改名换了 casing,git status 一片干净,仓库里存的还是旧名字——所以这个 bug 本地永远复现不出来,连 diff 都看不见。
+
+## 验证顺序
+
+**第 0 步:先确认这是不是真的 404。** 这一步 30 秒,但决定后面走哪条路。
+
+```
+curl -I https://<你的站>.pages.dev/images/hero.png
+```
+
+如果返回 `200` 且 `content-type: text/html`,那就不是文件缺失——你的 `_redirects` 里有个 SPA catch-all(`/* /index.html 200`)把所有未命中路径吞成了首页 HTML,浏览器拿到 HTML 当图片解析,显示破图。真正的问题在 routing 规则太宽,漏了静态资源。这种情况直接跳到最后一节。
+
+如果真的返回 `404`,继续。
+
+**第 1 步:文件到底在不在仓库里。** 这条命令同时排掉两个嫌疑:
+
+```
+git ls-files | grep -i hero
+```
+
+没有任何输出 → 图片没被提交。去查 `.gitignore`,高频肇事条目是 `*.jpg`、`assets/`、`dist/`、`build/`,或者某个 `public/.gitignore` 里的遗留规则。Pages 是从 git 拉代码构建的,本地磁盘上有这个文件不代表 Cloudflare 见过它。
+
+有输出,但打印出来的文件名和你 HTML/JSX 里写的 `src` 大小写不一致 → 就是大小写问题,已确诊。
+
+**第 2 步:大小写批量对照。** 上一步只查了一个文件,现在把全站引用和实际文件对一遍。思路是把 HTML 里所有图片引用抽出来,逐个去仓库文件列表里做区分大小写的精确匹配:
+
+```
+grep -rhoE '(src|href)="[^"]*\.(png|jpg|jpeg|svg|webp|gif)"' dist/ \
+  | sed -E 's/.*="([^"]*)".*/\1/' | sort -u
+```
+
+拿这个列表跟 `git ls-files` 的结果对齐。人工扫一眼就行,不一致的地方通常扎堆——某个人某次批量重命名留下的。
+
+修复时注意:直接 `mv Hero.png hero.png` 在 macOS 上 git 看不见。必须用 `git mv --force Hero.png hero.png`,或者临时 `git config core.ignorecase false` 再操作。
+
+**第 3 步:图片在不在构建产物里。** 前两步干净的话,问题转到打包环节:
+
+```
+find dist -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.svg' \) | head -50
+```
+
+(把 `dist` 换成你实际的输出目录。)
+
+如果源码里有、`dist` 里没有,那是 bundler 没收走。最常见的形态是图片放在 `src/assets/` 但用字符串拼接的动态路径引用——Vite/webpack 靠静态分析 `import` 语句决定打包哪些资源,`` `/assets/${name}.png` `` 这种写法它看不见,于是文件不会被复制到产物里。dev server 之所以正常,是因为它直接从源码目录 serve,不经过这层分析。
+
+解法是把不参与打包的图片移到 `public/`(Vite/Next/Astro 都会原样复制这个目录到产物根),或者改用显式 import。
+
+**第 4 步:路径前缀。** 到这一步说明文件确实在产物里了,那就是 URL 拼错了。检查构建配置里的 `base`(Vite)/ `basePath`(Next)/ `site` + `base`(Astro)。典型情况是为了适配 GitHub Pages 的子路径部署设了 `base: '/repo-name/'`,而 Pages 部署在域名根上,于是所有资源请求都多了一层不存在的前缀。反过来也一样。
+
+直接看构建出的 HTML 源码里图片的 `src` 长什么样,和你 curl 的路径对比,比读配置文件快。
+
+**第 5 步(前面全干净才走到这):Pages 平台限制。** 去 Cloudflare Dashboard 看这次部署的构建日志,末尾会有一行 "Uploading N files"。拿这个 N 跟 `find dist -type f | wc -l` 对。差很多说明有文件被跳过。Pages 对单文件大小和单次部署文件总数都有上限(量级分别是几十 MB 和两万个文件,具体数字以当前官方文档为准,我记不精确),超大的原图或者上万张缩略图会撞上。
+
+## 关于第 0 步那个分支
+
+如果 curl 返回的是 200 + HTML,你的 `_redirects` 需要收窄。catch-all 规则应该只兜 SPA 的路由路径,不该覆盖静态资源。最省事的做法是确认静态文件在产物里的物理位置确实能被直接命中——Pages 的匹配顺序是先查实体文件、再走 `_redirects`,所以如果实体文件存在就轮不到 catch-all。返回 HTML 反过来证明了文件不在,你还是得回到第 1-3 步找它为什么不在。
+
+---
+
+告诉我你的框架(Vite / Next / Astro / Hugo / 纯手写)和第 0 步 curl 的实际响应头,我可以把这个流程收窄到两三步。如果你能贴一下 `.gitignore` 和构建日志里的上传文件数,大概率第一轮就能定位。
