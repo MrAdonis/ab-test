@@ -1,0 +1,61 @@
+{
+  "M1_reduced_motion_visible": true,
+  "M1_detail": {
+    "min_effective_opacity": 1.0,
+    "worst": {}
+  },
+  "M2_anim_disabled_visible": true,
+  "M2_detail": {
+    "min_effective_opacity": 1.0,
+    "worst": {}
+  },
+  "M3_features_pinned": true,
+  "M3_detail": {
+    "pinned_px": 1172,
+    "need": 640,
+    "section_h": 2232,
+    "tops": [
+      96,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      80,
+      34,
+      -96
+    ]
+  },
+  "M4_hscroll_nonpointer_entry": true,
+  "M4_detail": {
+    "scroller": true,
+    "tabindex": "0",
+    "buttons": 2
+  },
+  "M5_gpu_only": true,
+  "M5_detail": {
+    "transition_all": false,
+    "transition_layout": [],
+    "keyframe_layout": []
+  },
+  "M6_hover_gated": true,
+  "M6_detail": {
+    "hover_motion_rules": 1,
+    "hover_media_query": true
+  },
+  "M7_parallax_transform": true,
+  "M7_detail": {
+    "background_attachment_fixed": false,
+    "layout_driven": false
+  },
+  "reduced_motion_block": true,
+  "reduced_motion_blanket_kill": false,
+  "uses_animation_timeline": true,
+  "uses_supports_guard": true,
+  "uses_intersection_observer": false,
+  "MAIN_SCORE": "2/2",
+  "COVERAGE_SCORE": "5/5"
+}

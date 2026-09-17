@@ -1,0 +1,12 @@
+三处动效都改完了,直接改了 `index.html`、`style.css`,新建了 `main.js`。已用 Chrome 实测桌面 1440px 和移动 390px 两个宽度,滚动全流程走了一遍,console 无报错。
+
+**1. 首屏纵深感**(`main.js` `updateHeroParallax`)
+`.hero-bg`、`.hero-mid`、`.hero-copy` 三层按不同速度 `translateY`(0.15x / 0.35x / 0.5x),标题额外带一个随滚动淡出的 opacity,营造"背景慢、中层中、标题快且渐隐"的深度差,而不是整体一起平移。滚动通过 `requestAnimationFrame` 节流。
+
+**2. 功能区 sticky-pin 滚动叙事**(`index.html` 加了一层 `.features-inner` 包裹,`style.css` + `main.js`)
+`.features` 撑高到 `370vh`,内部 `.features-inner` 用 `position:sticky` 钉住,图片视觉区因此始终不动;右侧三段 `.step` 默认 `opacity:.25`,滚动进度按三等分依次加 `.active`(`opacity:1` + 上移归位),三段走完后 section 高度耗尽、sticky 自然释放,回到正常滚动——不需要额外代码处理"恢复"。
+
+**3. 案例卡片横向滚动**(`style.css` `.case-list`/`.case`)
+从 grid 网格改成 `flex` + `overflow-x:auto` + `scroll-snap-type:x mandatory`,每张卡片固定宽度 240px 并 `scroll-snap-align:start`,右侧加了一条 `mask-image` 渐隐提示还有更多卡片,细滚动条做了浅色描边。
+
+**降级处理**:窄屏(`≤860px`)和 `prefers-reduced-motion:reduce` 下,功能区的 pin/scroll-jack 整体关闭,退回普通堆叠布局、三段文字直接可见(已用 390px 视口实测截图确认);首屏视差也在 reduced-motion 下跳过。横向滚动卡片不受此限制,触屏本身滑动自然。

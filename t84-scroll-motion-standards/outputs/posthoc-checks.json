@@ -1,0 +1,50 @@
+{
+  "A1": {
+    "normal_min_opacity": 0.991,
+    "anim_disabled_min_opacity": 0.991,
+    "delta": 0.0,
+    "wheel": {
+      "scroller": true,
+      "after12": 2940,
+      "after20": 2940,
+      "pageMax": 3290,
+      "trapped": true
+    }
+  },
+  "A2": {
+    "normal_min_opacity": 0.25,
+    "anim_disabled_min_opacity": 0.25,
+    "delta": 0.0,
+    "wheel": {
+      "scroller": true,
+      "after12": 3883,
+      "after20": 3883,
+      "pageMax": 3883,
+      "trapped": false
+    }
+  },
+  "B1": {
+    "normal_min_opacity": 0.961,
+    "anim_disabled_min_opacity": 1.0,
+    "delta": -0.039,
+    "wheel": {
+      "scroller": true,
+      "after12": 3194,
+      "after20": 3194,
+      "pageMax": 3194,
+      "trapped": false
+    }
+  },
+  "B2": {
+    "normal_min_opacity": 1.0,
+    "anim_disabled_min_opacity": 1.0,
+    "delta": 0.0,
+    "wheel": {
+      "scroller": true,
+      "after12": 3482,
+      "after20": 3482,
+      "pageMax": 3482,
+      "trapped": false
+    }
+  }
+}

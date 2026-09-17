@@ -1,0 +1,344 @@
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/CLAUDE.md /tmp/t84-run/B1/CLAUDE.md
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/CLAUDE.md	1969-12-31 16:00:00
++++ /tmp/t84-run/B1/CLAUDE.md	2026-09-16 21:01:25
+@@ -0,0 +1,11 @@
++# Northwind 官网
++
++便携气象站的单页落地页。纯静态站点，没有构建流程。
++
++## 约束
++- 只有 `index.html` + `style.css`，需要脚本就新建 `main.js`，用原生 JS
++- 不引入任何依赖，不装 npm 包，不引 CDN 动画库
++- 设计 token 已定义在 `style.css` 的 `:root`，颜色和间距复用变量，不要新造色值
++
++## 动效
++本项目的滚动与指针动效标准见 `docs/MOTION.md`，做动效前先读。
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/agent-out.log /tmp/t84-run/B1/agent-out.log
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/agent-out.log	1969-12-31 16:00:00
++++ /tmp/t84-run/B1/agent-out.log	2026-09-16 21:13:33
+@@ -0,0 +1,25 @@
++三处动效都已实现并在真实浏览器里验证通过,全部改动只在 `/private/tmp/t84-run/B1/index.html` 和 `/private/tmp/t84-run/B1/style.css` 里,没有新建 `main.js`——三个效果用纯 CSS 都能做到,没必要引入脚本依赖。
++
++**1. 首屏纵深**
++
++`.hero-bg`(背景)和 `.hero-mid`(中景)各自用 `animation-timeline: view()` 绑定滚动进度,分别位移 `-12vh` 和 `-6vh`,标题 `.hero-copy` 不挂任何动画、随页面正常滚动。三层速度不同,滚动时会自然拉开层次感。
++
++按 `docs/MOTION.md` 的兼容性硬约束,这两条动画包在 `@supports (animation-timeline:view())` 里,外层默认状态就是终态(`transform:translateY(0)`)——不支持这个特性的浏览器(目前主要是 Firefox 稳定版)直接看到完整、未跑偏的首屏,不会出现内容消失或错位。
++
++**2. 功能区左图锁定、右侧文字依次推进**
++
++纯靠 `position: sticky` 实现,没有用 JS 做滚动劫持。`.feature-visual`(装产品图的容器)`sticky` 在 `top:4.5rem`,右边 `.feature-steps` 三个 `.step` 各自 `min-height:88vh`。当左边图钉住后,右侧三段因为总高度比左边容器高,会依次滚过视口,直到最后一段结束、右列高度耗尽,sticky 自动释放,恢复正常滚动——这是 CSS Grid + sticky 的天然行为,不需要额外代码控制"何时解锁"。
++
++按 MOTION.md 要求的"锁定期间必须有位置反馈",加了两处:
++- `h2::before` 用 CSS 计数器显示 `01/02/03` 编号
++- 当前段落高亮、前后段落淡出(`step-focus` 动画,同样包在 `@supports` 里,降级后默认 `opacity:1` 正常显示,不会丢内容)
++
++**3. 案例卡片横向滚动**
++
++把 `<ul class="case-list">` 外面包了层 `.case-scroll` div,列表改成 `display:flex; overflow-x:auto`,配 `scroll-snap-type:x proximity` + `scroll-snap-align:center`(不用 `mandatory`,避免卡在中途滑不动)。右边缘加了个渐隐遮罩(`.case-scroll::after`)提示"还有更多卡片",符合 MOTION.md 对横向滚动"必须有溢出暗示"的要求。
++
++**验证方式**
++
++本地起了个 HTTP 服务器(不能用 byob 直接测 `file://`,会被拦),在真实浏览器里滚完全程截图确认:首屏两层视差不同步、标题独立;滚到功能区能看到图片钉住不动、"01 风速"→"03 湿度"依次高亮切换,图片位置全程没变;划过案例区能看到横向滚动条,程序化滚动 `scrollBy` 验证 6 张卡片(含最后"屋顶光伏")全部可达。中途因为本机一个无关的旧 HTTP 进程占用了测试端口、串了另一个项目的页面,一度误判出"卡片变形"的假 bug,换了干净端口重测后确认是环境问题,不是代码问题。测试用的临时服务器和截图已经清理干净,不影响项目目录。
++
++`prefers-reduced-motion: reduce` 下三处视觉动画(视差位移、步骤聚焦位移)都会被关掉,保留最终稳定状态,符合 MOTION.md 的降级要求。
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/docs/MOTION.md /tmp/t84-run/B1/docs/MOTION.md
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/docs/MOTION.md	1969-12-31 16:00:00
++++ /tmp/t84-run/B1/docs/MOTION.md	2026-09-16 21:01:25
+@@ -0,0 +1,201 @@
++# 滚动与指针动效标准
++
++## 定位与边界
++
++本文只管**滚动与指针动效**：滚动触发与滚动绑定的区分、视差、sticky 滚动叙事、滚动吸附、滚动缩放、图片序列、横向滚动、指针跟随、多输入等价、reduced-motion 降级。
++
++不管的部分（遵循项目既有动效约定，本文不重复定义）：缓动曲线、时长预算、spring 参数、stagger 间隔、transform-origin、组件级进出场动效、press 反馈、设计 token。本文需要引用这些时只做指引，不复制数值。
++
++## 0. 先分清两种滚动动效
++
++这是全篇的前提。同一个滚轮动作承担两件完全不同的事：
++
++| | Scroll-triggered（进入视口） | Scroll-linked（跟随进度） |
++| --- | --- | --- |
++| 心智模型 | 按下播放键，之后动画自己播完 | 拖动视频进度条，滚到哪播到哪 |
++| 用户停止滚动 | 动画继续播完 | 动画停在当前帧 |
++| 用户反向滚动 | 不受影响（默认 once） | 同步倒放 |
++| 实现 | IntersectionObserver + CSS transition | `animation-timeline: view() / scroll()` |
++| 典型用途 | 标题入场、卡片交错、数据卡 | 视差、滚动缩放、进度条、图片序列 |
++
++**提示词与需求文档里必须写明是哪一种。** 只说"滚动时动画"会让实现方在两者间瞎猜，而两者的失败模式完全不同：triggered 的典型 bug 是反复进出视口反复播放，linked 的典型 bug 是倒放时状态不对称。
++
++**判定**：问一句"用户滚到一半停下来，画面应该停在中间状态吗？" 是 → linked；否 → triggered。
++
++---
++
++## 1. 实现路径优先级
++
++1. **CSS scroll-driven animations**（`animation-timeline: scroll()` / `view()`）——运行在合成器线程，不占主线程。**但必须写成渐进增强**，见下方兼容性硬约束。
++2. **IntersectionObserver + CSS transition**——triggered 类的默认解，也是 Firefox 的兜底路径。不要用 scroll 事件算位置来模拟它。
++3. **rAF + scroll 监听**——最后手段。只在需要读取滚动速度、方向差值等 IO 给不了的信息时用，且必须 rAF 节流，禁止在 scroll 回调里直接读 `getBoundingClientRect()` 触发强制同步布局。
++
++### 兼容性硬约束（2026-09 核实）
++
++`animation-timeline` **尚未 Baseline**，卡在 Firefox：
++
++| 引擎 | 状态 |
++| --- | --- |
++| Chrome / Edge | 115+ 无 flag 支持（2023-07） |
++| Safari / iOS Safari | 26 起支持（2025-09），26.4 加入 threaded 执行，26.5 修进度精度与 `animation-play-state` 缺陷（2026-06） |
++| Firefox | **stable 仍在 `layout.css.scroll-driven-animations.enabled` flag 后**（截至 Firefox 152 / 2026-06），Nightly 默认开，已列入 Interop 2026 |
++
++全球支持率约 82.6%（caniuse）。**不认识 `animation-timeline` 的浏览器会直接忽略它**——这意味着如果初始状态写成 `opacity: 0`，Firefox 用户看到的是**内容永久消失**，不是"动画没播"。这是这条路径唯一的真事故，也是必须渐进增强的原因。
++
++强制写法：默认状态写成**已揭示的终态**，动画部分包进 `@supports`：
++
++```css
++.reveal {                      /* 默认 = 终态，任何浏览器都能看到内容 */
++  opacity: 1;
++  transform: translateY(0);
++}
++
++@supports (animation-timeline: view()) {
++  .reveal {
++    animation: reveal linear both;
++    animation-timeline: view();
++    animation-range: entry 0% entry 100%;
++  }
++}
++```
++
++**判据**：任何 scroll-driven 动画，把 `animation-timeline` 整行删掉之后，页面内容必须仍然完整可读。做不到就是写错了。
++
++滚动动效同样只动 `transform` / `opacity`。视差禁止用 `background-position` 或 `top` 实现。
++
++`will-change: transform` 只挂在真正长时间运动的层上，别整页撒，也不要预防性添加。
++
++## 2. 视差（Parallax）
++
++- **层数 ≤ 3**（背景 / 中景 / 前景）。多于三层时每层幅度必须继续压缩，否则画面散掉。
++- **位移幅度按层递减**，背景最慢。推荐默认：前景 0（正常滚动）、中景 视口高度的 4–8%、背景 8–15%。*（推荐值，无外部来源）*
++- **禁止反向视差**用在正文阅读区。反方向移动是眩晕投诉的主要来源，只允许出现在纯视觉首屏。
++- **正文页只允许极轻视差**，或干脆不用。速度差的作用是暗示深度，不是表演。
++- **移动端默认减弱到桌面的一半或关闭**。小屏上同样的 px 位移感知更强。
++- 各层必须始终对齐成一幅完整画面，不能在滚动中途露出错位边缘。
++
++**Hunt for**：`background-attachment: fixed`（性能差且 iOS 行为不一致）、视差层用 `top`/`margin-top` 驱动、四层以上、正文段落套在视差层里。
++
++---
++
++## 3. Sticky 滚动叙事（Scrollytelling）
++
++固定一块区域、旁边内容继续推进，是产品拆解和数据故事的主力形态。它最大的失败模式是**用户以为页面卡死**。
++
++- **锁定长度用滚动距离表达，不是时间**。推荐上限：整段锁定不超过 3–4 个视口高度，且至少切分成 3 段。*（推荐值，无外部来源）*
++- **每一段必须有可见变化**。连续两个视口高度画面不变 = 用户会开始怀疑页面坏了，要么合并段落，要么加中间状态。
++- **锁定期间必须有位置反馈**：章节编号、进度条或步骤高亮。没有进度指示的长 sticky 段不予通过。
++- **释放要干净**：最后一段结束后立即恢复正常滚动，不要留一段"还锁着但什么都不变"的尾巴。
++- **`position: sticky` 会被任意祖先的 `overflow: hidden/auto/scroll` 静默杀死**。改动 sticky 区块后核一遍祖先链。
++
++**Hunt for**：sticky 容器高度写死 px 而非 vh 倍数、段落数 < 3 的长锁定、锁定区内没有任何进度指示、祖先链上的 `overflow-x: hidden`。
++
++---
++
++## 4. 滚动吸附（Scroll snap）
++
++- **`mandatory` 只用于内容高度确定小于视口的全屏章节**。内容高于视口时用 `mandatory` 会让用户永远滚不到该屏底部——这是 snap 最常见的事故。
++- **正文长内容一律 `proximity` 或不用**。强制整屏吸附会让用户无法停在想读的位置。
++- **横向卡片画廊用 `proximity` + `scroll-snap-align: center`**，保留自由滑动手感。
++- 需要防止一次滑动跨过多张卡片时才加 `scroll-snap-stop: always`，默认不加。
++- snap 不能表现为突然跳变；吸附过程要有可感知的过渡。
++
++**Hunt for**：`scroll-snap-type: y mandatory` 出现在包含长文的容器上、snap 容器内子项高度超过 100vh、snap 与 `scroll-behavior: smooth` 叠加导致的双重动画。
++
++---
++
++## 5. 滚动缩放与图片序列
++
++**Scroll zoom**
++- **文字不跟随大幅缩放**。文字栅格化后再放大会糊，`transform: scale()` 尤其明显。缩放交给图片或主物体，标题单独保持清晰稳定。
++- 缩放必须可逆：反向滚动按原路径缩回。
++
++**Image sequence**
++- 用 `canvas` 逐帧绘制，**不要靠切换 `<img src>`**——后者会产生请求抖动和白闪。
++- 帧必须**预加载**，加载完成前显示一张静态主图；加载失败也落到这张图。
++- 移动端减帧（推荐：桌面帧数的 1/2 到 1/3）并考虑直接降级成静态图。*（推荐值，无外部来源）*
++- 整组帧的总字节量要进性能预算——这是这类效果最容易失控的地方。
++
++**Hunt for**：标题挂在缩放层里、`<img>` 逐帧切换、没有静态降级图、帧序列无预加载。
++
++---
++
++## 6. 横向滚动（Horizontal scroll）
++
++- **手机端默认恢复纵向列表**。横向滑动与系统边缘返回手势冲突，且触屏横滚的可发现性差。
++- **键盘可达性不能丢**：横向区块内的链接和按钮必须能 Tab 到，且聚焦时容器要自动滚到该元素。这是横向滚动最常见的 a11y 事故。
++- **不要无限劫持纵向滚轮**。转换纵向滚轮为横向推进的区块要有明确的开始和结束，并且进出衔接自然。
++- 必须有"还有更多内容在右边"的视觉暗示（渐隐边缘、部分露出的下一张、箭头）。
++
++**Hunt for**：横向容器内元素 `tabindex="-1"`、滚轮劫持无退出条件、移动端未降级、无溢出暗示。
++
++---
++
++## 7. 指针动效（Pointer）
++
++- **全部指针动效必须门控在 `@media (hover: hover) and (pointer: fine)` 内**。
++- **磁吸按钮一页最多 1–2 个**，只给首要行动按钮。每个按钮都磁吸会让整个界面显得不稳定。
++- **指针跟随类效果用 spring 插值，不要把值直接绑到指针坐标**（直绑没有惯性，感觉是假的）。
++- **自定义光标不能让系统光标消失或变迟钝**。跟随元素可以延迟，真实指针必须始终可定位。输入框内恢复系统光标。
++- **光标聚光灯 / 指针响应背景不进正文区**。持续的亮度变化干扰阅读。
++- **光标拖尾经过按钮、输入框和正文时暂停**，避免遮挡点击目标。
++
++**Hunt for**：未门控的 `pointermove` 监听、`cursor: none` 且无替代、正文容器上挂聚光灯、拖尾粒子无上限。
++
++---
++
++## 8. 多输入方式的功能等价（硬性）
++
++这一条不是审美，是可用性底线。**`@media (hover: hover)` 门控解决的是"触屏别误触发 hover 动效"，不解决"触屏用户能不能完成同一件事"。** 这是两件事。
++
++任何功能都必须在鼠标、触屏、键盘三种输入下都有入口：
++
++| 桌面交互 | 必须同时提供 |
++| --- | --- |
++| 鼠标悬停展开 | 键盘聚焦展开 + 触屏点击展开 |
++| 拖拽排序 | 上移 / 下移按钮 |
++| 左右滑动切换 | 上一项 / 下一项按钮 |
++| 长按打开菜单 | 可见的更多操作按钮 |
++| 光标跟随类提示 | 触屏端的静态等价物或直接省略 |
++
++**关键操作绝不能只存在于 hover 之后。** 装饰性指针效果在触屏端可以直接不渲染，功能性的必须有替代入口。
++
++键盘那一半的常见解是 hover-only 次要操作用 `opacity-0 group-hover:opacity-100 focus-within:opacity-100` 双触发；本表补的是触屏那一半。
++
++---
++
++## 9. Reduced motion 下的降级
++
++`prefers-reduced-motion: reduce` 时，滚动动效的降级不是全部关掉，是**换成安静版本**：
++
++| 效果 | 降级到 |
++| --- | --- |
++| 视差、多层视差 | 静态，各层不位移 |
++| 滚动缩放 | 直接显示终态尺寸 |
++| 图片序列 | 静态主图 |
++| 光标跟随、拖尾、聚光灯 | 全部关闭 |
++| 自动轮播、循环动画 | 停止，显示最终状态 |
++| 横向滚动叙事 | 改为纵向列表 |
++| 进入视口淡入 | **保留**（短促淡化不致眩晕） |
++| 滚动进度指示 | **保留**（这是位置反馈，不是装饰） |
++| 加载 / 成功 / 错误反馈 | **保留**（功能性反馈不能砍） |
++
++判据：**位移和缩放砍掉，透明度和颜色保留，所有状态反馈保留。** 降级后的页面必须仍然能看懂发生了什么。
++
++---
++
++## 10. 确定性检查候选
++
++以下是可以 grep 的反模式，适合并入项目的静态检查：
++
++- `background-attachment:\s*fixed`
++- `scroll-snap-type:\s*[xy]\s+mandatory` 且同容器内有长文标记
++- `cursor:\s*none` 且无 `@media (hover: hover)` 门控
++- `pointermove` / `mousemove` 监听未包在 hover 门控内
++- sticky 区块的祖先链上有 `overflow-x: hidden`（已有）
++- 有 `animation-timeline` 但无 `prefers-reduced-motion` 块
++- 逐帧 `<img>` 序列（连续编号 src）
++
++反向验证要求：每条新检查上线前，必须故意造一次该检查本应捕获的失败，贴出它变红的实际输出，还原后再贴一次通过的输出。
++
++---
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/index.html /tmp/t84-run/B1/index.html
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/index.html	2026-09-16 20:52:36
++++ /tmp/t84-run/B1/index.html	2026-09-16 21:04:22
+@@ -33,14 +33,16 @@
+ 
+ <section id="cases" class="cases">
+   <h2>他们在用</h2>
+-  <ul class="case-list">
+-    <li class="case"><h3>高山向导</h3><p>海拔 4200 米连续记录 21 天。</p></li>
+-    <li class="case"><h3>帆船队</h3><p>赛前两小时风向预判。</p></li>
+-    <li class="case"><h3>葡萄园</h3><p>霜冻预警提前 6 小时。</p></li>
+-    <li class="case"><h3>无人机测绘</h3><p>起飞窗口自动判定。</p></li>
+-    <li class="case"><h3>野外考察</h3><p>离线记录，回城同步。</p></li>
+-    <li class="case"><h3>屋顶光伏</h3><p>积雪载荷提示。</p></li>
+-  </ul>
++  <div class="case-scroll">
++    <ul class="case-list">
++      <li class="case"><h3>高山向导</h3><p>海拔 4200 米连续记录 21 天。</p></li>
++      <li class="case"><h3>帆船队</h3><p>赛前两小时风向预判。</p></li>
++      <li class="case"><h3>葡萄园</h3><p>霜冻预警提前 6 小时。</p></li>
++      <li class="case"><h3>无人机测绘</h3><p>起飞窗口自动判定。</p></li>
++      <li class="case"><h3>野外考察</h3><p>离线记录，回城同步。</p></li>
++      <li class="case"><h3>屋顶光伏</h3><p>积雪载荷提示。</p></li>
++    </ul>
++  </div>
+ </section>
+ 
+ <section id="buy" class="buy">
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/style.css /tmp/t84-run/B1/style.css
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/style.css	2026-09-16 20:52:36
++++ /tmp/t84-run/B1/style.css	2026-09-16 21:04:50
+@@ -14,29 +14,55 @@
+ .nav nav a{margin-left:1.5rem;text-decoration:none;color:var(--muted)}
+ 
+ .hero{position:relative;min-height:88vh;display:grid;place-items:center;overflow:hidden}
+-.hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,#dfe6e4,#c9d6d1)}
+-.hero-mid{position:absolute;inset:auto 0 -10% 0;height:45%;background:linear-gradient(0deg,#b4c5be,transparent)}
++.hero-bg{position:absolute;inset:-25% 0;background:linear-gradient(160deg,#dfe6e4,#c9d6d1);will-change:transform}
++.hero-mid{position:absolute;left:0;right:0;bottom:-25%;height:60%;background:linear-gradient(0deg,#b4c5be,transparent);will-change:transform}
+ .hero-copy{position:relative;text-align:center;padding:var(--space)}
+ .hero h1{font-size:clamp(2.4rem,7vw,4.5rem)}
+ .hero p{color:var(--muted);font-size:1.15rem}
+ 
++/* 首屏纵深：背景/中景差速视差，前景标题按正常滚动，不额外加动画 */
++@keyframes hero-parallax-bg{from{transform:translateY(0)}to{transform:translateY(-12vh)}}
++@keyframes hero-parallax-mid{from{transform:translateY(0)}to{transform:translateY(-6vh)}}
++@supports (animation-timeline:view()){
++  .hero-bg{animation:hero-parallax-bg linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
++  .hero-mid{animation:hero-parallax-mid linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
++}
++
+ .btn{display:inline-block;margin-top:1.5rem;padding:.75rem 1.75rem;border-radius:999px;
+   background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
+ 
+-.features{display:grid;grid-template-columns:1fr 1fr;gap:var(--space);padding:calc(var(--space)*2) var(--space)}
+-.feature-visual{display:grid;place-items:center}
++.features{display:grid;grid-template-columns:1fr 1fr;gap:var(--space);padding:calc(var(--space)*2) var(--space);align-items:start}
++.feature-visual{position:sticky;top:4.5rem;height:80vh;display:grid;place-items:center}
+ .device{width:min(340px,80%);aspect-ratio:3/4;border-radius:28px;background:#cfd8d4;border:1px solid var(--line)}
+-.step{padding:calc(var(--space)*1.5) 0;border-bottom:1px solid var(--line)}
++.feature-steps{counter-reset:step}
++.step{counter-increment:step;min-height:88vh;display:flex;flex-direction:column;justify-content:center;gap:.5rem}
++.step:not(:last-child){border-bottom:1px solid var(--line)}
+ .step h2{font-size:1.9rem}
++.step h2::before{content:counter(step,decimal-leading-zero) "  ";color:var(--accent);font-size:1rem;font-weight:700;letter-spacing:.05em}
+ .step p{color:var(--muted);margin:0}
+ 
++/* 滚动锁定期间的步骤高亮：当前段落聚焦，前后段落淡出，作为位置反馈 */
++@keyframes step-focus{0%{opacity:.35;transform:translateY(16px)}50%{opacity:1;transform:translateY(0)}100%{opacity:.35;transform:translateY(-16px)}}
++@supports (animation-timeline:view()){
++  .step{animation:step-focus linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
++}
++
+ .cases{padding:calc(var(--space)*2) var(--space)}
+-.case-list{list-style:none;margin:0;padding:0;display:grid;gap:1rem;
+-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+-.case{padding:1.5rem;background:#fff;border:1px solid var(--line);border-radius:14px}
++.case-scroll{position:relative}
++.case-scroll::after{content:"";position:absolute;top:0;right:0;bottom:0;width:3rem;
++  background:linear-gradient(to right,transparent,var(--paper));pointer-events:none}
++.case-list{list-style:none;margin:0;padding:0 3rem 1rem 0;display:flex;gap:1rem;
++  overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:var(--space)}
++.case{flex:0 0 min(260px,72vw);padding:1.5rem;background:#fff;border:1px solid var(--line);
++  border-radius:14px;scroll-snap-align:center}
+ .case h3{font-size:1.1rem}
+ .case p{color:var(--muted);margin:0;font-size:.95rem}
+ 
+ .buy{text-align:center;padding:calc(var(--space)*3) var(--space)}
+ .buy h2{font-size:clamp(2rem,6vw,3.4rem)}
+ footer{padding:2rem var(--space);border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
++
++@media (prefers-reduced-motion:reduce){
++  .hero-bg,.hero-mid{animation:none;transform:none}
++  .step{animation:none;opacity:1;transform:none}
++}

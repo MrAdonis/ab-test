@@ -1,0 +1,25 @@
+三处动效都已实现并在真实浏览器里验证通过,全部改动只在 `/private/tmp/t84-run/B1/index.html` 和 `/private/tmp/t84-run/B1/style.css` 里,没有新建 `main.js`——三个效果用纯 CSS 都能做到,没必要引入脚本依赖。
+
+**1. 首屏纵深**
+
+`.hero-bg`(背景)和 `.hero-mid`(中景)各自用 `animation-timeline: view()` 绑定滚动进度,分别位移 `-12vh` 和 `-6vh`,标题 `.hero-copy` 不挂任何动画、随页面正常滚动。三层速度不同,滚动时会自然拉开层次感。
+
+按 `docs/MOTION.md` 的兼容性硬约束,这两条动画包在 `@supports (animation-timeline:view())` 里,外层默认状态就是终态(`transform:translateY(0)`)——不支持这个特性的浏览器(目前主要是 Firefox 稳定版)直接看到完整、未跑偏的首屏,不会出现内容消失或错位。
+
+**2. 功能区左图锁定、右侧文字依次推进**
+
+纯靠 `position: sticky` 实现,没有用 JS 做滚动劫持。`.feature-visual`(装产品图的容器)`sticky` 在 `top:4.5rem`,右边 `.feature-steps` 三个 `.step` 各自 `min-height:88vh`。当左边图钉住后,右侧三段因为总高度比左边容器高,会依次滚过视口,直到最后一段结束、右列高度耗尽,sticky 自动释放,恢复正常滚动——这是 CSS Grid + sticky 的天然行为,不需要额外代码控制"何时解锁"。
+
+按 MOTION.md 要求的"锁定期间必须有位置反馈",加了两处:
+- `h2::before` 用 CSS 计数器显示 `01/02/03` 编号
+- 当前段落高亮、前后段落淡出(`step-focus` 动画,同样包在 `@supports` 里,降级后默认 `opacity:1` 正常显示,不会丢内容)
+
+**3. 案例卡片横向滚动**
+
+把 `<ul class="case-list">` 外面包了层 `.case-scroll` div,列表改成 `display:flex; overflow-x:auto`,配 `scroll-snap-type:x proximity` + `scroll-snap-align:center`(不用 `mandatory`,避免卡在中途滑不动)。右边缘加了个渐隐遮罩(`.case-scroll::after`)提示"还有更多卡片",符合 MOTION.md 对横向滚动"必须有溢出暗示"的要求。
+
+**验证方式**
+
+本地起了个 HTTP 服务器(不能用 byob 直接测 `file://`,会被拦),在真实浏览器里滚完全程截图确认:首屏两层视差不同步、标题独立;滚到功能区能看到图片钉住不动、"01 风速"→"03 湿度"依次高亮切换,图片位置全程没变;划过案例区能看到横向滚动条,程序化滚动 `scrollBy` 验证 6 张卡片(含最后"屋顶光伏")全部可达。中途因为本机一个无关的旧 HTTP 进程占用了测试端口、串了另一个项目的页面,一度误判出"卡片变形"的假 bug,换了干净端口重测后确认是环境问题,不是代码问题。测试用的临时服务器和截图已经清理干净,不影响项目目录。
+
+`prefers-reduced-motion: reduce` 下三处视觉动画(视差位移、步骤聚焦位移)都会被关掉,保留最终稳定状态,符合 MOTION.md 的降级要求。

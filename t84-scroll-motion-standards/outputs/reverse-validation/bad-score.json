@@ -1,0 +1,71 @@
+{
+  "M1_reduced_motion_visible": false,
+  "M1_detail": {
+    "min_effective_opacity": 0,
+    "worst": {
+      "eff": 0,
+      "w": 568,
+      "h": 26.390625,
+      "text": "陶瓷轴承超声风速计，0."
+    }
+  },
+  "M2_anim_disabled_visible": false,
+  "M2_detail": {
+    "min_effective_opacity": 0,
+    "worst": {
+      "eff": 0,
+      "w": 568,
+      "h": 26.390625,
+      "text": "陶瓷轴承超声风速计，0."
+    }
+  },
+  "M3_features_pinned": false,
+  "M3_detail": {
+    "pinned_px": 61,
+    "need": 640,
+    "section_h": 861,
+    "tops": [
+      96,
+      90,
+      84,
+      79,
+      73,
+      68,
+      62,
+      57,
+      51,
+      46,
+      40,
+      34
+    ]
+  },
+  "M4_hscroll_nonpointer_entry": false,
+  "M4_detail": {
+    "scroller": true,
+    "tabindex": null,
+    "buttons": 0
+  },
+  "M5_gpu_only": false,
+  "M5_detail": {
+    "transition_all": true,
+    "transition_layout": [],
+    "keyframe_layout": []
+  },
+  "M6_hover_gated": false,
+  "M6_detail": {
+    "hover_motion_rules": 1,
+    "hover_media_query": false
+  },
+  "M7_parallax_transform": false,
+  "M7_detail": {
+    "background_attachment_fixed": true,
+    "layout_driven": false
+  },
+  "reduced_motion_block": true,
+  "reduced_motion_blanket_kill": true,
+  "uses_animation_timeline": true,
+  "uses_supports_guard": false,
+  "uses_intersection_observer": false,
+  "MAIN_SCORE": "0/2",
+  "COVERAGE_SCORE": "0/5"
+}

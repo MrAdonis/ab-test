@@ -1,0 +1,170 @@
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/CLAUDE.md /tmp/t84-run/A2/CLAUDE.md
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/CLAUDE.md	1969-12-31 16:00:00
++++ /tmp/t84-run/A2/CLAUDE.md	2026-09-16 21:14:09
+@@ -0,0 +1,8 @@
++# Northwind 官网
++
++便携气象站的单页落地页。纯静态站点，没有构建流程。
++
++## 约束
++- 只有 `index.html` + `style.css`，需要脚本就新建 `main.js`，用原生 JS
++- 不引入任何依赖，不装 npm 包，不引 CDN 动画库
++- 设计 token 已定义在 `style.css` 的 `:root`，颜色和间距复用变量，不要新造色值
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/agent-out.log /tmp/t84-run/A2/agent-out.log
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/agent-out.log	1969-12-31 16:00:00
++++ /tmp/t84-run/A2/agent-out.log	2026-09-16 21:18:05
+@@ -0,0 +1,12 @@
++三处动效都改完了,直接改了 `index.html`、`style.css`,新建了 `main.js`。已用 Chrome 实测桌面 1440px 和移动 390px 两个宽度,滚动全流程走了一遍,console 无报错。
++
++**1. 首屏纵深感**(`main.js` `updateHeroParallax`)
++`.hero-bg`、`.hero-mid`、`.hero-copy` 三层按不同速度 `translateY`(0.15x / 0.35x / 0.5x),标题额外带一个随滚动淡出的 opacity,营造"背景慢、中层中、标题快且渐隐"的深度差,而不是整体一起平移。滚动通过 `requestAnimationFrame` 节流。
++
++**2. 功能区 sticky-pin 滚动叙事**(`index.html` 加了一层 `.features-inner` 包裹,`style.css` + `main.js`)
++`.features` 撑高到 `370vh`,内部 `.features-inner` 用 `position:sticky` 钉住,图片视觉区因此始终不动;右侧三段 `.step` 默认 `opacity:.25`,滚动进度按三等分依次加 `.active`(`opacity:1` + 上移归位),三段走完后 section 高度耗尽、sticky 自然释放,回到正常滚动——不需要额外代码处理"恢复"。
++
++**3. 案例卡片横向滚动**(`style.css` `.case-list`/`.case`)
++从 grid 网格改成 `flex` + `overflow-x:auto` + `scroll-snap-type:x mandatory`,每张卡片固定宽度 240px 并 `scroll-snap-align:start`,右侧加了一条 `mask-image` 渐隐提示还有更多卡片,细滚动条做了浅色描边。
++
++**降级处理**:窄屏(`≤860px`)和 `prefers-reduced-motion:reduce` 下,功能区的 pin/scroll-jack 整体关闭,退回普通堆叠布局、三段文字直接可见(已用 390px 视口实测截图确认);首屏视差也在 reduced-motion 下跳过。横向滚动卡片不受此限制,触屏本身滑动自然。
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/index.html /tmp/t84-run/A2/index.html
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/index.html	2026-09-16 20:52:36
++++ /tmp/t84-run/A2/index.html	2026-09-16 21:16:10
+@@ -23,11 +23,13 @@
+ </section>
+ 
+ <section id="features" class="features">
+-  <div class="feature-visual"><div class="device"></div></div>
+-  <div class="feature-steps">
+-    <article class="step"><h2>风速</h2><p>陶瓷轴承超声风速计，0.1 m/s 分辨率，无机械磨损。</p></article>
+-    <article class="step"><h2>气压</h2><p>双气压腔交叉校准，海拔漂移自动补偿。</p></article>
+-    <article class="step"><h2>湿度</h2><p>高分子薄膜电容式传感，冷凝后自动加热复位。</p></article>
++  <div class="features-inner">
++    <div class="feature-visual"><div class="device"></div></div>
++    <div class="feature-steps">
++      <article class="step"><h2>风速</h2><p>陶瓷轴承超声风速计，0.1 m/s 分辨率，无机械磨损。</p></article>
++      <article class="step"><h2>气压</h2><p>双气压腔交叉校准，海拔漂移自动补偿。</p></article>
++      <article class="step"><h2>湿度</h2><p>高分子薄膜电容式传感，冷凝后自动加热复位。</p></article>
++    </div>
+   </div>
+ </section>
+ 
+@@ -49,5 +51,6 @@
+ </section>
+ 
+ <footer><p>© 2026 Northwind Instruments</p></footer>
++<script src="main.js"></script>
+ </body>
+ </html>
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/main.js /tmp/t84-run/A2/main.js
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/main.js	1969-12-31 16:00:00
++++ /tmp/t84-run/A2/main.js	2026-09-16 21:16:35
+@@ -0,0 +1,54 @@
++(function () {
++  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
++  var mqWide = window.matchMedia('(min-width: 861px)');
++
++  var hero = document.querySelector('.hero');
++  var heroBg = document.querySelector('.hero-bg');
++  var heroMid = document.querySelector('.hero-mid');
++  var heroCopy = document.querySelector('.hero-copy');
++
++  var featuresSection = document.querySelector('.features');
++  var steps = document.querySelectorAll('.features .step');
++
++  function updateHeroParallax() {
++    if (reduceMotion || !hero) return;
++    var rect = hero.getBoundingClientRect();
++    if (rect.bottom < 0 || rect.top > window.innerHeight) return;
++    var scrolled = -rect.top;
++    heroBg.style.transform = 'translateY(' + scrolled * 0.15 + 'px)';
++    heroMid.style.transform = 'translateY(' + scrolled * 0.35 + 'px)';
++    heroCopy.style.transform = 'translateY(' + scrolled * 0.5 + 'px)';
++    heroCopy.style.opacity = Math.max(1 - scrolled / (rect.height * 0.8), 0);
++  }
++
++  function updateFeatureSteps() {
++    if (!featuresSection || !steps.length) return;
++    if (reduceMotion || !mqWide.matches) {
++      steps.forEach(function (s) { s.classList.add('active'); });
++      return;
++    }
++    var rect = featuresSection.getBoundingClientRect();
++    var scrollable = featuresSection.offsetHeight - window.innerHeight;
++    var progress = scrollable > 0 ? -rect.top / scrollable : 0;
++    progress = Math.min(Math.max(progress, 0), 1);
++    var activeIndex = Math.min(steps.length - 1, Math.floor(progress * steps.length));
++    steps.forEach(function (s, i) {
++      s.classList.toggle('active', i <= activeIndex);
++    });
++  }
++
++  var ticking = false;
++  function onScroll() {
++    if (ticking) return;
++    ticking = true;
++    requestAnimationFrame(function () {
++      updateHeroParallax();
++      updateFeatureSteps();
++      ticking = false;
++    });
++  }
++
++  window.addEventListener('scroll', onScroll, { passive: true });
++  window.addEventListener('resize', onScroll);
++  onScroll();
++})();
+diff -ruN /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/style.css /tmp/t84-run/A2/style.css
+--- /Users/edon/Projects/personal/ab-test/t84-scroll-motion-standards/fixture/style.css	2026-09-16 20:52:36
++++ /tmp/t84-run/A2/style.css	2026-09-16 21:17:35
+@@ -14,26 +14,42 @@
+ .nav nav a{margin-left:1.5rem;text-decoration:none;color:var(--muted)}
+ 
+ .hero{position:relative;min-height:88vh;display:grid;place-items:center;overflow:hidden}
+-.hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,#dfe6e4,#c9d6d1)}
+-.hero-mid{position:absolute;inset:auto 0 -10% 0;height:45%;background:linear-gradient(0deg,#b4c5be,transparent)}
+-.hero-copy{position:relative;text-align:center;padding:var(--space)}
++.hero-bg{position:absolute;inset:-10% 0;background:linear-gradient(160deg,#dfe6e4,#c9d6d1);will-change:transform}
++.hero-mid{position:absolute;inset:auto 0 -10% 0;height:45%;background:linear-gradient(0deg,#b4c5be,transparent);will-change:transform}
++.hero-copy{position:relative;text-align:center;padding:var(--space);will-change:transform,opacity}
+ .hero h1{font-size:clamp(2.4rem,7vw,4.5rem)}
+ .hero p{color:var(--muted);font-size:1.15rem}
+ 
+ .btn{display:inline-block;margin-top:1.5rem;padding:.75rem 1.75rem;border-radius:999px;
+   background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
+ 
+-.features{display:grid;grid-template-columns:1fr 1fr;gap:var(--space);padding:calc(var(--space)*2) var(--space)}
++.features{position:relative;height:370vh}
++.features-inner{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:1fr 1fr;gap:var(--space);align-items:center;padding:0 var(--space)}
+ .feature-visual{display:grid;place-items:center}
+ .device{width:min(340px,80%);aspect-ratio:3/4;border-radius:28px;background:#cfd8d4;border:1px solid var(--line)}
+-.step{padding:calc(var(--space)*1.5) 0;border-bottom:1px solid var(--line)}
++.step{padding:calc(var(--space)*1.5) 0;border-bottom:1px solid var(--line);
++  opacity:.25;transform:translateY(20px);transition:opacity .5s ease-out,transform .5s ease-out}
++.step:last-child{border-bottom:none}
++.step.active{opacity:1;transform:translateY(0)}
+ .step h2{font-size:1.9rem}
+ .step p{color:var(--muted);margin:0}
+ 
+-.cases{padding:calc(var(--space)*2) var(--space)}
+-.case-list{list-style:none;margin:0;padding:0;display:grid;gap:1rem;
+-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+-.case{padding:1.5rem;background:#fff;border:1px solid var(--line);border-radius:14px}
++@media (max-width:860px),(prefers-reduced-motion:reduce){
++  .features{height:auto}
++  .features-inner{position:static;height:auto;grid-template-columns:1fr;padding:0}
++  .step{opacity:1;transform:none;transition:none}
++}
++
++.cases{padding:calc(var(--space)*2) 0 calc(var(--space)*2) var(--space)}
++.cases h2{padding-right:var(--space)}
++.case-list{list-style:none;margin:0;padding:.25rem var(--space) 1.25rem 0;display:flex;gap:1rem;
++  overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:var(--space);
++  -webkit-overflow-scrolling:touch;scrollbar-width:thin;
++  -webkit-mask-image:linear-gradient(to right,#000 92%,transparent);
++  mask-image:linear-gradient(to right,#000 92%,transparent)}
++.case-list::-webkit-scrollbar{height:6px}
++.case-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
++.case{flex:0 0 240px;scroll-snap-align:start;padding:1.5rem;background:#fff;border:1px solid var(--line);border-radius:14px}
+ .case h3{font-size:1.1rem}
+ .case p{color:var(--muted);margin:0;font-size:.95rem}
+ 

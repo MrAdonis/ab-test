@@ -1,0 +1,66 @@
+{
+  "M1_reduced_motion_visible": true,
+  "M1_detail": {
+    "min_effective_opacity": 1.0,
+    "worst": {}
+  },
+  "M2_anim_disabled_visible": true,
+  "M2_detail": {
+    "min_effective_opacity": 0.991,
+    "worst": {
+      "eff": 0.991446,
+      "w": 568,
+      "h": 26.390625,
+      "text": "双气压腔交叉校准，海拔漂"
+    }
+  },
+  "M3_features_pinned": true,
+  "M3_detail": {
+    "pinned_px": 1600,
+    "need": 640,
+    "section_h": 2400,
+    "tops": [
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72,
+      72
+    ]
+  },
+  "M4_hscroll_nonpointer_entry": false,
+  "M4_detail": {
+    "scroller": true,
+    "tabindex": null,
+    "buttons": 0
+  },
+  "M5_gpu_only": true,
+  "M5_detail": {
+    "transition_all": false,
+    "transition_layout": [],
+    "keyframe_layout": []
+  },
+  "M6_hover_gated": null,
+  "M6_detail": {
+    "hover_motion_rules": 0,
+    "hover_media_query": false
+  },
+  "M7_parallax_transform": true,
+  "M7_detail": {
+    "background_attachment_fixed": false,
+    "layout_driven": false
+  },
+  "reduced_motion_block": true,
+  "reduced_motion_blanket_kill": false,
+  "uses_animation_timeline": false,
+  "uses_supports_guard": false,
+  "uses_intersection_observer": true,
+  "MAIN_SCORE": "2/2",
+  "COVERAGE_SCORE": "3/4"
+}

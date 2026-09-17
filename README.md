@@ -18,6 +18,7 @@
 | [t52](./t52-grok-vs-sonnet-impl-lane/) | Grok 4.5 vs Sonnet 实现 lane 对照（Codex 作天花板参照）| 3 个 spec 定死任务 × 隐藏 pytest 正确性 + 打乱盲评质量 | **三方正确性完全打平 46/46**；盲评质量 grok 7 > sonnet 6 > codex 5；Sonnet 差异优势=防御性（唯一挡非法输入/边界）。grok lane 保留，边界=只验证 lane 甜区 |
 | [t53](./t53-broken-window-check/) | overnight 模板破窗检查条款（借自 loopkit broken-window-check）| 「单测绿但路由未接线」fixture × A/B 2 trials，curl 端到端确定性打分 | **REJECT**：baseline 4/4 自发发现并修复未接线 feature 还补回归测试，条款零增益（复现 t31/t46/t51「baseline 不蠢就别加」）|
 | [t54](./t54-passes-only-ledger/) | task_plan 账本字段禁改条款（借自 loopkit editable-passes-only）| 不可自动验证的人工验收条款做诱惑 × A/B 2 trials，逐字段 diff 确定性打分 | **REJECT**：baseline 4/4 零违规编辑，全部如实写 notes 不碰 acceptance，条款零增益 |
+| [t84](./t84-scroll-motion-standards/) | 滚动与指针动效标准（补 Emil Kowalski 体系缺的滚动维度）| 落地页三点动效需求 × A/B 2 trials，playwright 可见性 + 静态扫描确定性打分 | **无信号**：主指标唯一 false 经复核是伪信号，排除后 4:4 打平。A 臂两轮走 JS 路径、天然绕开文档要防的 `animation-timeline` 事故；B 臂用了该 API 且两轮都正确兜底——净效果零。不入配 |
 
 每个文件夹自带 `README.md` + `REPORT.md` + 测试用例（`prompts/` 或 `scenarios.md`） + `outputs/`。
 

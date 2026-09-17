@@ -1,0 +1,54 @@
+:root{
+  --ink:#1b1d1f; --paper:#f7f6f3; --muted:#6c6f73; --line:#e2e0db; --accent:#2f6f5e;
+  --space:clamp(1rem,4vw,3rem);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.65 "Helvetica Neue",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em}
+a{color:inherit}
+
+.nav{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;
+  padding:1rem var(--space);background:rgba(247,246,243,.9);border-bottom:1px solid var(--line)}
+.logo{font-weight:700;letter-spacing:.02em}
+.nav nav a{margin-left:1.5rem;text-decoration:none;color:var(--muted)}
+
+.hero{position:relative;min-height:88vh;display:grid;place-items:center;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:linear-gradient(160deg,#dfe6e4,#c9d6d1)}
+.hero-mid{position:absolute;inset:auto 0 -10% 0;height:45%;background:linear-gradient(0deg,#b4c5be,transparent)}
+.hero-copy{position:relative;text-align:center;padding:var(--space)}
+.hero h1{font-size:clamp(2.4rem,7vw,4.5rem)}
+.hero p{color:var(--muted);font-size:1.15rem}
+
+.btn{display:inline-block;margin-top:1.5rem;padding:.75rem 1.75rem;border-radius:999px;
+  background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
+
+.features{display:grid;grid-template-columns:1fr 1fr;gap:var(--space);padding:calc(var(--space)*2) var(--space)}
+.feature-visual{display:grid;place-items:center}
+.device{width:min(340px,80%);aspect-ratio:3/4;border-radius:28px;background:#cfd8d4;border:1px solid var(--line)}
+.step{padding:calc(var(--space)*1.5) 0;border-bottom:1px solid var(--line)}
+.step h2{font-size:1.9rem}
+.step p{color:var(--muted);margin:0}
+
+.cases{padding:calc(var(--space)*2) var(--space)}
+.case-list{list-style:none;margin:0;padding:0;display:grid;gap:1rem;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.case{padding:1.5rem;background:#fff;border:1px solid var(--line);border-radius:14px}
+.case h3{font-size:1.1rem}
+.case p{color:var(--muted);margin:0;font-size:.95rem}
+
+.buy{text-align:center;padding:calc(var(--space)*3) var(--space)}
+.buy h2{font-size:clamp(2rem,6vw,3.4rem)}
+footer{padding:2rem var(--space);border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+/* --- BAD sample --- */
+.step, .case { opacity: 0; transform: translateY(24px);
+  animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+@keyframes reveal { to { opacity: 1; transform: translateY(0); } }
+.feature-visual { position: sticky; top: 80px; }
+.features { overflow: hidden; }
+.case-list { display: flex; overflow-x: auto; gap: 16px; }
+.case { flex: 0 0 280px; }
+.hero-bg { transition: all .4s; }
+.hero-mid { background-attachment: fixed; }
+.case:hover { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

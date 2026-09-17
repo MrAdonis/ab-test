@@ -1,0 +1,14 @@
+本地预览用的 `python3 -m http.server 8934` 还在后台跑着,是否需要我帮你关掉?回复"关"就用 `pkill -f "http.server 8934"` 结束,不回复也没关系,不影响代码本身。
+
+三处改动都在 `/private/tmp/t84-run/A1/index.html`、`/private/tmp/t84-run/A1/style.css`、新建的 `/private/tmp/t84-run/A1/main.js` 里,浏览器里验证过效果,总结如下:
+
+**1. 首屏纵深感**(`style.css` hero 部分 + `main.js` `heroParallax`)
+背景、中间渐变层、标题三层按不同速率滚动位移(40px / 90px / -60px),标题额外带淡出,营造近处元素移动更快的视差纵深。给三层加了 `inset:-15%` 缓冲区,避免位移后露出空白边缘。
+
+**2. 功能区图钉住 + 文字依次推进**(`style.css` `.features` 部分 + `main.js` `featureSteps`)
+纯 CSS `position:sticky` 让左侧产品图在滚动时钉在视口(`top:4.5rem`),右侧三段文字各占 100vh 高度,滚够三屏后图片自然跟着页面继续滚动、恢复正常。用 `IntersectionObserver` 给当前居中的那段加高亮、非活跃段调暗(`.is-dim`),配合产品图轻微旋转/缩放联动,强化"依次点亮"的感觉。JS 不加载时降级为全部段落常亮、纯靠 sticky 布局,不影响可用性。
+
+**3. 案例区横向滚动**(`style.css` `.case-list` 部分 + `main.js` `caseWheelScroll`)
+六张卡片改成 `flex` 横排 + `scroll-snap-type:x mandatory`,原生触屏/触控板可直接横滑;另加了一段 JS,把桌面鼠标纵向滚轮手势转换成横向滚动,方便鼠标用户。
+
+全部动效都判断了 `prefers-reduced-motion`,命中时关闭视差、钉图渐变和产品图动画,不改变布局结构。没有引入新的颜色或依赖,复用了 `style.css` 里已有的 `--accent`/`--line`/`--space` 变量。
