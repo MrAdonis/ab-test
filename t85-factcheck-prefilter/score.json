@@ -1,0 +1,26 @@
+{
+  "A": {
+    "missing_files": [],
+    "auto_total": 11,
+    "caught_p0": 11,
+    "caught_anywhere": 11,
+    "misses": [],
+    "downgraded": [],
+    "false_positives": [],
+    "manual_pending": [
+      "2026-09-18#1"
+    ]
+  },
+  "B": {
+    "missing_files": [],
+    "auto_total": 11,
+    "caught_p0": 11,
+    "caught_anywhere": 11,
+    "misses": [],
+    "downgraded": [],
+    "false_positives": [],
+    "manual_pending": [
+      "2026-09-18#1"
+    ]
+  }
+}

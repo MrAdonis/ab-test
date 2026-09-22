@@ -1,0 +1,147 @@
+{
+  "corpus": "/tmp/audit-corpus",
+  "dates": [
+    "2026-09-18",
+    "2026-09-20",
+    "2026-09-21"
+  ],
+  "injected": [
+    {
+      "id": "2026-09-18#0",
+      "date": "2026-09-18",
+      "kind": "digit_swap",
+      "original": "纳指涨 0.39% 报 26522.54",
+      "mutated": "纳指涨 0.93% 报 26522.54",
+      "research_authority": "^IXIC +0.39%",
+      "note": "纳指涨幅 0.39% 被换位成 0.93%，指数点位仍对",
+      "marker": "0.93"
+    },
+    {
+      "id": "2026-09-18#1",
+      "date": "2026-09-18",
+      "kind": "direction_flip",
+      "original": "VIX 收 14.81，跌 4.08%",
+      "mutated": "VIX 收 14.81，涨 4.08%",
+      "research_authority": "^VIX 14.81 -4.08%",
+      "note": "VIX 当天下跌，稿中改成上涨，方向反了",
+      "marker": "MANUAL"
+    },
+    {
+      "id": "2026-09-18#2",
+      "date": "2026-09-18",
+      "kind": "digit_swap",
+      "original": "美元指数收 100.21 基本纹丝不动",
+      "mutated": "美元指数收 101.20 基本纹丝不动",
+      "research_authority": "DX-Y.NYB 100.21",
+      "note": "美元指数 100.21 被换位成 101.20",
+      "marker": "101.20"
+    },
+    {
+      "id": "2026-09-18#3",
+      "date": "2026-09-18",
+      "kind": "magnitude",
+      "original": "WTI 单日跌 6.32% 收 95.47 美元",
+      "mutated": "WTI 单日跌 6.32% 收 105.47 美元",
+      "research_authority": "CL=F 95.47 -6.32%",
+      "note": "WTI 收盘价被抬高 10 美元，与同句跌幅不自洽",
+      "marker": "105.47"
+    },
+    {
+      "id": "2026-09-20#4",
+      "date": "2026-09-20",
+      "kind": "digit_swap",
+      "original": "标普期货涨 0.35%，纳指期货涨 0.54%",
+      "mutated": "标普期货涨 0.53%，纳指期货涨 0.54%",
+      "research_authority": "ES=F +0.35%",
+      "note": "标普期货涨幅 0.35% 被换位成 0.53%",
+      "marker": "0.53"
+    },
+    {
+      "id": "2026-09-20#5",
+      "date": "2026-09-20",
+      "kind": "magnitude",
+      "original": "八月只有 70 万桶/日",
+      "mutated": "八月只有 170 万桶/日",
+      "research_authority": "JPMorgan：八月仅 70 万桶/日",
+      "note": "八月外运量 70 万桶/日被改成 170 万，削弱了对比",
+      "marker": "170"
+    },
+    {
+      "id": "2026-09-20#6",
+      "date": "2026-09-20",
+      "kind": "internal_inconsistency",
+      "original": "美联储把联邦基金利率上调 25 个基点到 3.75% 到 4.00%",
+      "mutated": "美联储把联邦基金利率上调 50 个基点到 3.75% 到 4.00%",
+      "research_authority": "加息 25bp 至 3.75%-4.00%",
+      "note": "加息幅度改成 50bp，与同句给出的目标区间自相矛盾",
+      "marker": "50 个基点"
+    },
+    {
+      "id": "2026-09-20#7",
+      "date": "2026-09-20",
+      "kind": "digit_swap",
+      "original": "Schwab 给的标普支撑在 7600",
+      "mutated": "Schwab 给的标普支撑在 7400",
+      "research_authority": "Schwab：标普支撑 7600",
+      "note": "支撑位 7600 被改成 7400，且与末段『7600 就要真的去试』不一致",
+      "marker": "7400"
+    },
+    {
+      "id": "2026-09-21#8",
+      "date": "2026-09-21",
+      "kind": "digit_swap",
+      "original": "纳斯达克 27,122.09 涨 2.26%",
+      "mutated": "纳斯达克 27,122.09 涨 2.62%",
+      "research_authority": "^IXIC +2.26%",
+      "note": "纳指涨幅 2.26% 被换位成 2.62%",
+      "marker": "2.62"
+    },
+    {
+      "id": "2026-09-21#9",
+      "date": "2026-09-21",
+      "kind": "digit_swap",
+      "original": "道指只涨 0.71% 到 52,048.83",
+      "mutated": "道指只涨 0.17% 到 52,048.83",
+      "research_authority": "^DJI +0.71%",
+      "note": "道指涨幅 0.71% 被换位成 0.17%",
+      "marker": "0.17"
+    },
+    {
+      "id": "2026-09-21#10",
+      "date": "2026-09-21",
+      "kind": "digit_swap",
+      "original": "10 年期美债收益率 4.96%",
+      "mutated": "10 年期美债收益率 4.69%",
+      "research_authority": "^TNX 4.96",
+      "note": "十年期 4.96% 被换位成 4.69%，且与同句『没离开 5% 这个门口』矛盾",
+      "marker": "4.69"
+    },
+    {
+      "id": "2026-09-21#11",
+      "date": "2026-09-21",
+      "kind": "magnitude",
+      "original": "VIX 14.87，基本没动",
+      "mutated": "VIX 15.87，基本没动",
+      "research_authority": "^VIX 14.87 +0.41%",
+      "note": "VIX 被抬高 1 点，与『基本没动』不符",
+      "marker": "15.87"
+    }
+  ],
+  "traps": [
+    {
+      "date": "2026-09-20",
+      "span": "WTI 上周五结算在 100.30 美元",
+      "why": "research 有换月说明：CL=F previous_close 96.08 ≠ 9/18 日线 100.30，稿件自己也写了『两个数不能直接相减』"
+    },
+    {
+      "date": "2026-09-18",
+      "span": "白银涨 2.34% 到 67.64 美元/盎司",
+      "why": "research 新闻段只给了 silver +2.34%，67.64 这个绝对价格底本里没有——属于无法核实，不等于错误"
+    },
+    {
+      "date": "2026-09-21",
+      "span": "Polymarket 上「美联储十月会议后加息 25 个基点」还挂在 52%",
+      "why": "research 结构化块里没有 Polymarket，属无法核实，不等于错误"
+    }
+  ]
+}
